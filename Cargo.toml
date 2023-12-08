@@ -7,6 +7,7 @@ keywords = ["linux", "proc", "parser"]
 categories = ["os::linux-apis", "parsing", "filesystem"]
 homepage = "https://github.com/FritsHoogland/proc_sys_parser/"
 repository = "https://github.com/FritsHoogland/proc_sys_parser/"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

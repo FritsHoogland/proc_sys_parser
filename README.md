@@ -1,4 +1,5 @@
-/*!
+# proc_sys_parser
+
 This crate provides routines for parsing linux `/proc` files into Rust structs.
 
 There are multiple other crates doing this, but these either do not choose to process the statistics
@@ -6,12 +7,12 @@ in way to make them directly usable, or generalize the statistics and loose the 
 
 Currently, only two `/proc` files are processed:
 
-# `/proc/stat`
+## `/proc/stat`
 The processor of `/proc/stat` reads the `CLK_TCK` setting and transforms the jiffies of the cpu times
 into milliseconds.
 
 Here is an example using `/proc/stat`:
-```no_run
+```rust
 use proc_sys_parser::{stat, stat::{ProcStat, CpuStat}};
 
 let proc_stat = stat::read();
@@ -35,13 +36,13 @@ assert_eq!(proc_stat,
              });
 ```
 
-# `/proc/schedstat`
+## `/proc/schedstat`
 The processor of `/proc/schedstat` also reads the `CLK_TCK` setting and transforms the jiffies with the
 cpu fields, which are fields 7 (time spent running by tasks on this processor) and 8 (time spent waiting
 to run by tasks on this processor) to milliseconds.
 
 Here is an example using `/proc/schedstat`:
-```no_run
+```rust
 use proc_sys_parser::{schedstat, schedstat::ProcSchedStat};
 
 let proc_schedstat = schedstat::read();
@@ -65,20 +66,17 @@ ProcSchedStat { version: 15,
                    vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
         });
 ```
-## cpu vector
+### cpu vector
 !! Please mind that the vector with cpu statistics takes the cpu number as the first field in the vector.
 
 This means that the fields 7 (running on cpu time) and 8 (waiting on cpu runtime) are fields 8 and 9
 in the vector.
-## domain vector
+### domain vector
 !!Please mind that the vector with domain statistics takes the domain number as the first field in the
 vector, and the cpumask as the second field.
 
 This means the numbers with the description for the fields
 in the kernel documentation <https://www.kernel.org/doc/Documentation/scheduler/sched-stats.txt> has
 to be increased by two to get the right statistic number in the vector.
- */
 
-pub mod stat;
-pub mod schedstat;
-
+License: Apache-2.0
