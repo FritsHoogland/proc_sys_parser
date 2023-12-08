@@ -4,8 +4,8 @@ use proc_sys_parser::schedstat;
 fn main()
 {
     let stat = stat::read();
-    println!("{:#?}", stat);
+    println!("{:?}", stat);
 
     let schedstat = schedstat::read();
-    println!("{:#?}", schedstat);
+    println!("{:?}", schedstat);
 }
