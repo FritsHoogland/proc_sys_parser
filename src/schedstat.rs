@@ -7,12 +7,19 @@ pub struct Builder
 {
     pub proc_schedstat_file: String
 }
+
+impl Default for Builder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Builder
 {
     pub fn new() -> Builder
     {
         Builder { proc_schedstat_file: "/proc/schedstat".to_string() }
     }
+
     pub fn file_name(mut self, proc_schedstat_file: &str) -> Builder
     {
         self.proc_schedstat_file = proc_schedstat_file.to_string();
@@ -27,6 +34,12 @@ impl Builder
 pub fn read() -> ProcSchedStat
 {
     Builder::new().read()
+}
+
+impl Default for ProcSchedStat {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 #[derive(Debug, PartialEq)]
 pub struct ProcSchedStat {
@@ -55,16 +68,16 @@ impl ProcSchedStat {
             match line
             {
                 line if line.starts_with("version ") => {
-                    schedstat.version = ProcSchedStat::generate_number_unsigned(&line);
+                    schedstat.version = ProcSchedStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("timestamp ") => {
-                    schedstat.timestamp = ProcSchedStat::generate_number_unsigned(&line);
+                    schedstat.timestamp = ProcSchedStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("cpu") => {
-                    schedstat.cpu.push(ProcSchedStat::generate_number_vector(&line));
+                    schedstat.cpu.push(ProcSchedStat::generate_number_vector(line));
                 },
                 line if line.starts_with("domain") => {
-                    schedstat.domain.push(ProcSchedStat::generate_number_vector(&line));
+                    schedstat.domain.push(ProcSchedStat::generate_number_vector(line));
                 },
                 _  => {
                     panic!("Unknown line found in schedstat: {}", line);
@@ -105,7 +118,7 @@ impl ProcSchedStat {
     }
     pub fn read_proc_schedstat(proc_schedstat_file: &str) -> ProcSchedStat
     {
-        let proc_schedstat_output = read_to_string(proc_schedstat_file).expect(format!("Error reading file: {}", proc_schedstat_file).as_str());
+        let proc_schedstat_output = read_to_string(proc_schedstat_file).unwrap_or_else(|error| panic!("Error {} reading file: {}", error, proc_schedstat_file));
         ProcSchedStat::parse_proc_schedstat_output(&proc_schedstat_output)
     }
 }

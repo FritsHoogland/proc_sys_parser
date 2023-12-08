@@ -21,12 +21,21 @@ pub struct Builder
 {
     pub proc_stat_file: String
 }
+
+impl Default for Builder
+{
+    fn default() -> Self
+    {
+        Self::new()
+    }
+}
 impl Builder
 {
     pub fn new() -> Builder
     {
         Builder { proc_stat_file: "/proc/stat".to_string() }
     }
+
     pub fn file_name(mut self, proc_stat_file: &str) -> Builder
     {
         self.proc_stat_file = proc_stat_file.to_string();
@@ -56,6 +65,11 @@ pub struct ProcStat {
     pub softirq: Vec<u64>,
 }
 
+impl Default for ProcStat {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl ProcStat {
     pub fn new() -> ProcStat {
         ProcStat {
@@ -80,31 +94,31 @@ impl ProcStat {
             match line
             {
                 line if line.starts_with("cpu ") => {
-                    procstat.cpu_total = CpuStat::generate_cpu_times(&line);
+                    procstat.cpu_total = CpuStat::generate_cpu_times(line);
                 },
                 line if line.starts_with("cpu") && line.chars().nth(3) != Some(' ') => {
-                    procstat.cpu_individual.push(CpuStat::generate_cpu_times(&line));
+                    procstat.cpu_individual.push(CpuStat::generate_cpu_times(line));
                 },
                 line if line.starts_with("intr ") => {
-                    procstat.interrupts = ProcStat::generate_number_vector(&line);
+                    procstat.interrupts = ProcStat::generate_number_vector(line);
                 },
                 line if line.starts_with("ctxt ") => {
-                    procstat.context_switches = ProcStat::generate_number_unsigned(&line);
+                    procstat.context_switches = ProcStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("btime ") => {
-                    procstat.boot_time = ProcStat::generate_number_unsigned(&line);
+                    procstat.boot_time = ProcStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("processes ") => {
-                    procstat.processes = ProcStat::generate_number_unsigned(&line);
+                    procstat.processes = ProcStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("procs_running ") => {
-                    procstat.processes_running = ProcStat::generate_number_unsigned(&line);
+                    procstat.processes_running = ProcStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("procs_blocked ") => {
-                    procstat.processes_blocked = ProcStat::generate_number_unsigned(&line);
+                    procstat.processes_blocked = ProcStat::generate_number_unsigned(line);
                 },
                 line if line.starts_with("softirq ") => {
-                    procstat.softirq = ProcStat::generate_number_vector(&line);
+                    procstat.softirq = ProcStat::generate_number_vector(line);
                 },
                 _  => {
                     panic!("Unknown line found in stat: {}", line);
@@ -131,7 +145,7 @@ impl ProcStat {
     pub fn read_proc_stat(proc_stat_file: &str) -> ProcStat
     {
         //let proc_stat_file = proc_stat_file.unwrap_or("/proc/stat");
-        let proc_stat_output = read_to_string(proc_stat_file).expect(format!("Error reading file: {}", proc_stat_file).as_str());
+        let proc_stat_output = read_to_string(proc_stat_file).unwrap_or_else(|error|panic!("Error {} reading file: {}", error, proc_stat_file));
         ProcStat::parse_proc_stat_output(&proc_stat_output)
     }
 }
