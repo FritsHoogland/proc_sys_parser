@@ -8,8 +8,7 @@ categories = ["os::linux-apis", "parsing", "filesystem"]
 homepage = "https://github.com/FritsHoogland/proc_sys_parser/"
 repository = "https://github.com/FritsHoogland/proc_sys_parser/"
 readme = "README.md"
-description = "This crate provides routines for parsing linux /proc files into Rust structs.
-There are multiple other crates doing this, but these either do not choose to process the statistics in way to make them directly usable, or generalize the statistics and loose the detail."
+description = "This crate provides routines for parsing linux /proc files into Rust structs. There are multiple other crates doing this, but these either do not choose to process the statistics in way to make them directly usable, or generalize the statistics and loose the detail."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
