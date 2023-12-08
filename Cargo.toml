@@ -1,0 +1,14 @@
+[package]
+name = "proc_sys_parser"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+keywords = ["linux", "proc", "parser"]
+categories = ["os::linux-apis", "parsing", "filesystem"]
+homepage = "https://github.com/FritsHoogland/proc_sys_parser/"
+repository = "https://github.com/FritsHoogland/proc_sys_parser/"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nix = { version = "0.27.1", features = [ "feature" ] }
