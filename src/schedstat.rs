@@ -1,8 +1,93 @@
+/*!
+Read data from `/proc/schedstat` into the struct [`ProcSchedStat`].
+
+The documentation for `/proc/schedstat` is found here: <https://www.kernel.org/doc/Documentation/scheduler/sched-stats.txt>.
+
+The stat module converts the jiffies from `/proc/schedstat` from the cpu line structs into milliseconds.
+It does that by taking the `CLK-TCK` (clock tick) sysconf variable set by `CONFIG_HZ`, and calculate
+the time in milliseconds from the cpu state jiffies value in the following way:
+
+```text
+(CPUSTATE_JIFFIES * 1000)        / CLK_TCK
+convert seconds to milliseconds    divide by ticks per second
+```
+
+Here is an example obtaining the data from `/proc/schedstat`:
+```no_run
+use proc_sys_parser::{schedstat, schedstat::ProcSchedStat};
+
+let proc_schedstat = schedstat::read();
+
+println!("{:#?}", proc_schedstat);
+```
+Example output:
+```text
+ProcSchedStat {
+    version: 15,
+    timestamp: 4294964691,
+    cpu: [[0, 0, 0, 0, 0, 0, 0, 40178371330, 4778820750, 26299],
+          [1, 0, 0, 0, 0, 0, 0, 35526916030, 3606934630, 20919],
+          [2, 0, 0, 0, 0, 0, 0, 29224692150, 5614007710, 28163],
+          [3, 0, 0, 0, 0, 0, 0, 23848255950, 2265375620, 26240],
+          [4, 0, 0, 0, 0, 0, 0, 33846671420, 2990792870, 25605],
+          [5, 0, 0, 0, 0, 0, 0, 34565043670, 2885580430, 22629]],
+    domain: [[0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+}
+```
+(edited for readability)
+
+If you want to change the path and/or file that is read for [`ProcSchedStat`], which is `/proc/schedstat`
+by default, use:
+```no_run
+use proc_sys_parser::{schedstat, schedstat::{ProcSchedStat, Builder}};
+
+let proc_schedstat = Builder::new().file_name("/myproc/schedstat").read();
+```
+
+# cpu vector numbers
+A `/proc/schedstat` cpu line might look like this:
+```text
+cpu0 0 0 0 0 0 0 4017837133 477882075 26299
+```
+Such a line will be transformed to the following (`Vec<u64>`) vector in ProcSchedStat.cpu:
+```text
+[0, 0, 0, 0, 0, 0, 0, 40178371330, 4778820750, 26299]
+```
+The first number is the cpu number (`cpu0`), the other numbers for cpu statistics follow.
+This has the consequence that the `CPU statistics` field numbers in the description from kernel.org
+now have to be increased by one to find the statistic in the vector.
+
+Also mind that:
+- The time running on cpu in jiffies, statistic number 7 in the description at kernel.org is changed
+  to time in milliseconds in the 8th position in the vector.
+- The time waiting to run in jiffies, statistic number 8 in the description at kernel.org is changed
+  to time in milliseconds in the 9th position in the vector.
+
+# domain vector numbers
+A `/proc/schedstat` domain line might look like this:
+```text
+domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+```
+Such a line will be transformed to the following (`Vec<u64>`) vector in ProcSchedStat.domain:
+```text
+[0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+```
+The first number is the domain number (`domain0`).
+The second number is the decimal representation of the hexadecimal `3f` number representing the cpu mask.
+Starting from the third number, the statistics that are explained with the `Domain statistics` are available.
+This has the consequence that the field numbers in the kernel.org explanation have to be increased by two
+to match the statistic in the vector.
+
+*/
 use nix::unistd::{sysconf, SysconfVar};
 use std::fs::read_to_string;
 
-// kernel.org: https://www.kernel.org/doc/Documentation/scheduler/sched-stats.txt
-
+/// Builder pattern for [`ProcSchedStat`]
 pub struct Builder
 {
     pub proc_schedstat_file: String
@@ -31,6 +116,8 @@ impl Builder
     }
 }
 
+/// The main function for building a [`ProcSchedStat`] struct with current data.
+/// This uses the Builder pattern, which allows settings such as the filename to specified.
 pub fn read() -> ProcSchedStat
 {
     Builder::new().read()
@@ -41,6 +128,7 @@ impl Default for ProcSchedStat {
         Self::new()
     }
 }
+/// Struct for holding `/proc/schedstat` statistics
 #[derive(Debug, PartialEq)]
 pub struct ProcSchedStat {
     pub version: u64,

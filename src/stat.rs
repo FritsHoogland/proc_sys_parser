@@ -1,22 +1,90 @@
+/*!
+Read data from `/proc/stat` into the struct [`ProcStat`].
+
+The Documentation for `/proc/stat` is found here: <https://www.kernel.org/doc/Documentation/filesystems/proc.txt>.
+
+Please mind that the description of "steal" time in the kernel source describes 'involuntary wait time'.
+This is true, but involuntary waiting means virtualization makes the kernel (virtual machine) wait.
+This is implemented for PowerPC, S390 and X86, and for X86 for paravirtualization.
+
+The stat module converts the jiffies from `/proc/stat` from the cpu_total and cpu_individual [`CpuStat`]
+structs into milliseconds. It does that by taking the `CLK-TCK` (clock tick) sysconf variable set by
+`CONFIG_HZ`, and calculate the time in milliseconds from the cpu state jiffies value in the following way:
+
+```text
+(CPUSTATE_JIFFIES * 1000)        / CLK_TCK
+convert seconds to milliseconds    divide by ticks per second
+```
+Example usage of stat:
+```no_run
+use proc_sys_parser::{stat, stat::{ProcStat, CpuStat}};
+
+let proc_stat = stat::read();
+```
+Example output:
+```text
+ProcStat {
+    cpu_total: CpuStat { name: "cpu", user: 8570, nice: 0, system: 7530, idle: 1710040, iowait: 2780, irq: 0, softirq: 150, steal: 0, guest: 0, guest_nice: 0 },
+    cpu_individual: [CpuStat { name: "cpu0", user: 1800, nice: 0, system: 1450, idle: 283400, iowait: 460, irq: 0, softirq: 120, steal: 0, guest: 0, guest_nice: 0 },
+                     CpuStat { name: "cpu1", user: 1720, nice: 0, system: 1320, idle: 284780, iowait: 580, irq: 0, softirq: 0, steal: 0, guest: 0, guest_nice: 0 },
+                     CpuStat { name: "cpu2", user: 1060, nice: 0, system: 1220, idle: 285410, iowait: 510, irq: 0, softirq: 0, steal: 0, guest: 0, guest_nice: 0 },
+                     CpuStat { name: "cpu3", user: 890, nice: 0, system: 990, idle: 286130, iowait: 450, irq: 0, softirq: 0, steal: 0, guest: 0, guest_nice: 0 },
+                     CpuStat { name: "cpu4", user: 1400, nice: 0, system: 1280, idle: 285260, iowait: 310, irq: 0, softirq: 30, steal: 0, guest: 0, guest_nice: 0 },
+                     CpuStat { name: "cpu5", user: 1680, nice: 0, system: 1250, idle: 285020, iowait: 450, irq: 0, softirq: 0, steal: 0, guest: 0, guest_nice: 0 }],
+    interrupts: [184655, 0, 4500, 60546, 0, 0, 0, 2, 0, 0, 0, 70138, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 548, 0, 0, 0, 0, 0, 2, 0, 3410, 2927, 4739, 5542, 1595, 1913, 0, 0, 0, 79, 154, 208, 282, 43, 52, 0, 14842, 11679, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 1437, 0, 0, 0, 0, 0, 0],
+    context_switches: 275716,
+    boot_time: 1702127060,
+    processes: 3472,
+    processes_running: 1,
+    processes_blocked: 0,
+    softirq: [99012, 30, 8368, 2, 24666, 11, 0, 208, 15031, 0, 50696]
+}
+```
+(edited for readability)
+
+If you want to change the path and/or file that is read for [`ProcStat`], which is `/proc/stat`, by
+default, use:
+```no_run
+use proc_sys_parser::{stat, stat::{ProcStat, CpuStat, Builder}};
+
+let proc_stat = Builder::new().file_name("/myproc/stat").read();
+```
+
+*/
 use nix::unistd::{sysconf, SysconfVar};
 use std::fs::read_to_string;
 
-// kernel.org: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+/// Struct for holding cpu times in milliseconds
 #[derive(Debug, PartialEq)]
 pub struct CpuStat {
+    /// cpu name. 'cpu' means total of all cpus, cpuN means individual cpu
     pub name: String,
+    /// user time in milliseconds
     pub user: u64,
+    /// user time reniced in milliseconds
     pub nice: u64,
+    /// system/kernel time in milliseconds
     pub system: u64,
+    /// idle time in milliseconds
     pub idle: u64,
+    /// idle time in milliseconds attributed to performing IO
     pub iowait: u64,
+    /// irq time in milliseconds
     pub irq: u64,
+    /// softirq time in milliseconds
     pub softirq: u64,
+    /// steal time in milliseconds
+    /// Introduced with kernel version 2.6.11
     pub steal: u64,
+    /// guest user time in milliseconds
+    /// Introduced with kernel version 2.6.24
     pub guest: u64,
+    /// guest user time reniced in milliseconds
+    /// Introduced with kernel version 2.6.24
     pub guest_nice: u64,
 }
 
+/// Builder pattern for [`ProcStat`]
 pub struct Builder
 {
     pub proc_stat_file: String
@@ -47,11 +115,14 @@ impl Builder
     }
 }
 
+/// The main function for building a [`ProcStat`] struct with current data.
+/// This uses the Builder pattern, which allows settings such as the filename to specified.
 pub fn read() -> ProcStat
 {
    Builder::new().read()
 }
 
+/// Struct for holding `/proc/stat` statistics
 #[derive(Debug, PartialEq)]
 pub struct ProcStat {
     pub cpu_total: CpuStat,
@@ -179,12 +250,12 @@ impl CpuStat {
             nice: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
             system: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
             idle: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            iowait: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            irq: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            softirq: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            steal: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            guest: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            guest_nice: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap()*1000_u64)/clock_time),
+            iowait: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
+            irq: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
+            softirq: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
+            steal: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
+            guest: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
+            guest_nice: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
         }
     }
 }
@@ -204,6 +275,16 @@ mod tests {
         let result = CpuStat::generate_cpu_times(&cpu_line);
         assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:76510, irq:0, softirq:13670, steal:0, guest:0, guest_nice:0 });
     }
+
+    // This mimics a (much) lower linux version which provides lesser statistics
+    // The statistics will be set to zero.
+    #[test]
+    fn parse_cpu_line_with_less_statistics() {
+        let cpu_line = "cpu  101521 47 66467 43586274";
+        let result = CpuStat::generate_cpu_times(&cpu_line);
+        assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:0, irq:0, softirq:0, steal:0, guest:0, guest_nice:0 });
+    }
+
 
     #[test]
     fn parse_interrupt_line() {
