@@ -131,7 +131,7 @@ impl ProcNetDev {
         let mut fields = proc_net_dev_line.split_whitespace();
 
         InterfaceStats {
-            name: fields.next().unwrap().to_string(),
+            name: fields.next().unwrap().trim_end_matches(':').to_string(),
             receive_bytes: fields.next().unwrap().parse::<u64>().unwrap(),
             receive_packets: fields.next().unwrap().parse::<u64>().unwrap(),
             receive_errors: fields.next().unwrap().parse::<u64>().unwrap(),
@@ -167,7 +167,7 @@ mod tests {
         let netdev_line = "  eth0: 151012532   16720    0    0    0     0          0         0   816228   12257    0    0    0     0       0          0";
         let result = ProcNetDev::parse_proc_net_dev_line(&netdev_line);
         assert_eq!(result, InterfaceStats {
-            name: "eth0:".to_string(), receive_bytes: 151012532, receive_packets: 16720, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
+            name: "eth0".to_string(), receive_bytes: 151012532, receive_packets: 16720, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
         );
     }
     #[test]
@@ -185,8 +185,8 @@ mod tests {
   eth0: 151013652   16736    0    0    0     0          0         0   816228   12257    0    0    0     0       0          0";
         let result = ProcNetDev::parse_proc_net_dev(proc_netdev);
         assert_eq!(result, ProcNetDev { interface:
-        vec![InterfaceStats { name: "lo:".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
-             InterfaceStats { name: "eth0:".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
+        vec![InterfaceStats { name: "lo".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
+             InterfaceStats { name: "eth0".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
         ] } );
     }
 
@@ -200,8 +200,8 @@ mod tests {
         let result = Builder::new().file_name("/tmp/_test_proc_net_dev").read();
         remove_file("/tmp/_test_proc_net_dev").unwrap();
         assert_eq!(result, ProcNetDev { interface:
-        vec![InterfaceStats { name: "lo:".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
-             InterfaceStats { name: "eth0:".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
+        vec![InterfaceStats { name: "lo".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
+             InterfaceStats { name: "eth0".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
         ] } );
     }
 }
