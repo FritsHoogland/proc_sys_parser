@@ -2,15 +2,10 @@
 Read data from `/proc/schedstat` into the struct [`ProcSchedStat`].
 
 The documentation for `/proc/schedstat` is found here: <https://www.kernel.org/doc/Documentation/scheduler/sched-stats.txt>.
+This says the cpu scheduler statistics are in jiffies. THIS IS INCORRECT since kernel version 2.6.23/commit 425e0968a25f.
+(<https://github.com/torvalds/linux/commit/425e0968a25f>)
 
-The stat module converts the jiffies from `/proc/schedstat` from the cpu line structs into milliseconds.
-It does that by taking the `CLK-TCK` (clock tick) sysconf variable set by `CONFIG_HZ`, and calculate
-the time in milliseconds from the cpu state jiffies value in the following way:
-
-```text
-(CPUSTATE_JIFFIES * 1000)        / CLK_TCK
-convert seconds to milliseconds    divide by ticks per second
-```
+The cpu scheduler statistics are now in nanoseconds.
 
 Here is an example obtaining the data from `/proc/schedstat`:
 ```no_run
@@ -84,7 +79,6 @@ This has the consequence that the field numbers in the kernel.org explanation ha
 to match the statistic in the vector.
 
 */
-use nix::unistd::{sysconf, SysconfVar};
 use std::fs::read_to_string;
 
 /// Builder pattern for [`ProcSchedStat`]
@@ -178,11 +172,9 @@ impl ProcSchedStat {
     {
         let proc_schedstat_line = match proc_schedstat_line {
             line if line.starts_with("cpu") => {
-                let clock_time = sysconf(SysconfVar::CLK_TCK).unwrap_or(Some(1)).unwrap_or(1) as u64;
                 line.split_whitespace().enumerate()
                     .map(|(nr, cpu)| if cpu.starts_with("cpu") { (nr, cpu.strip_prefix("cpu").unwrap()) } else { (nr, cpu) } )
                     .map(|(nr, number)| (nr, number.parse::<u64>().unwrap()))
-                    .map(|(nr, number)| if nr == 7 || nr == 8 { (nr, (number*1000_u64)/clock_time) } else { (nr, number) })
                     .map(|(_, number)| number)
                     .collect()
             },
@@ -237,7 +229,7 @@ mod tests {
     fn parse_cpu_line() {
         let cpu_line = "cpu0 0 0 0 0 0 0 455307306435 48519572891 4320349";
         let result = ProcSchedStat::generate_number_vector(&cpu_line);
-        assert_eq!(result, vec![0, 0, 0, 0, 0, 0, 0, 4553073064350, 485195728910, 4320349]);
+        assert_eq!(result, vec![0, 0, 0, 0, 0, 0, 0, 455307306435, 48519572891, 4320349]);
     }
 
     #[test]
@@ -266,12 +258,13 @@ domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
         assert_eq!(result, ProcSchedStat { version: 15,
             timestamp: 4318961659,
             cpu: vec![
-                vec![0, 0, 0, 0, 0, 0, 0, 4575719016330, 485940746140, 4348645],
-                vec![1, 0, 0, 0, 0, 0, 0, 4352064330120, 449441457150, 3928368],
-                vec![2, 0, 0, 0, 0, 0, 0, 4296375140810, 435916732570, 3833297],
-                vec![3, 0, 0, 0, 0, 0, 0, 4453083890360, 431027439820, 3851418],
-                vec![4, 0, 0, 0, 0, 0, 0, 4386665545210, 437068452780, 3787400],
-                vec![5, 0, 0, 0, 0, 0, 0, 4447083238720, 428623717880, 3900565]],
+                   vec![0, 0, 0, 0, 0, 0, 0, 457571901633, 48594074614, 4348645],
+                   vec![1, 0, 0, 0, 0, 0, 0, 435206433012, 44944145715, 3928368],
+                   vec![2, 0, 0, 0, 0, 0, 0, 429637514081, 43591673257, 3833297],
+                   vec![3, 0, 0, 0, 0, 0, 0, 445308389036, 43102743982, 3851418],
+                   vec![4, 0, 0, 0, 0, 0, 0, 438666554521, 43706845278, 3787400],
+                   vec![5, 0, 0, 0, 0, 0, 0, 444708323872, 42862371788, 3900565],
+            ],
             domain: vec![
                 vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -304,12 +297,13 @@ domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
         assert_eq!(result, ProcSchedStat { version: 15,
             timestamp: 4318961659,
             cpu: vec![
-                vec![0, 0, 0, 0, 0, 0, 0, 4575719016330, 485940746140, 4348645],
-                vec![1, 0, 0, 0, 0, 0, 0, 4352064330120, 449441457150, 3928368],
-                vec![2, 0, 0, 0, 0, 0, 0, 4296375140810, 435916732570, 3833297],
-                vec![3, 0, 0, 0, 0, 0, 0, 4453083890360, 431027439820, 3851418],
-                vec![4, 0, 0, 0, 0, 0, 0, 4386665545210, 437068452780, 3787400],
-                vec![5, 0, 0, 0, 0, 0, 0, 4447083238720, 428623717880, 3900565]],
+                vec![0, 0, 0, 0, 0, 0, 0, 457571901633, 48594074614, 4348645],
+                vec![1, 0, 0, 0, 0, 0, 0, 435206433012, 44944145715, 3928368],
+                vec![2, 0, 0, 0, 0, 0, 0, 429637514081, 43591673257, 3833297],
+                vec![3, 0, 0, 0, 0, 0, 0, 445308389036, 43102743982, 3851418],
+                vec![4, 0, 0, 0, 0, 0, 0, 438666554521, 43706845278, 3787400],
+                vec![5, 0, 0, 0, 0, 0, 0, 444708323872, 42862371788, 3900565],
+            ],
             domain: vec![
                 vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

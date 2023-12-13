@@ -16,7 +16,7 @@ The processor of `/proc/stat` reads the `CLK_TCK` setting and transforms the jif
 into milliseconds.
 
 Here is an example obtaining the data from `/proc/stat`:
-```rust
+```no_run
 use proc_sys_parser::{stat, stat::{ProcStat, CpuStat}};
 
 let proc_stat = stat::read();
@@ -39,19 +39,19 @@ ProcStat {
     processes: 3472,
     processes_running: 1,
     processes_blocked: 0,
-    softirq: [99012, 30, 8368, 2, 24666, 11, 0, 208, 15031, 0, 50696]
+    softirq: [99012, 30, 8368, 2, 24666, 11, 0, 208, 15031, 0, 50696],
 }
 ```
 (edited for readability)
 
 ## `/proc/schedstat`
-The processor of `/proc/schedstat` reads the `CLK_TCK` setting and transforms the jiffies with the
-cpu fields, which are fields 7 (time spent running by tasks on this processor) and 8 (time spent waiting
-to run by tasks on this processor) to milliseconds. These field numbers are the field numbers of the
-statistics in the cpu line of `/proc/schedstat`.
+The statistics in `/proc/schedstat`, which are the cpu line scheduler running and waiting statistics in fields 7 and 8
+are shown in jiffies up to kernel 2.6.23/commit 425e0968a25, and in nanoseconds after that.
+
+That means that most current systems should be using a kernel version that shows this time in nanoseconds.
 
 Here is an example obtaining the data from `/proc/schedstat`:
-```rust
+```no_run
 use proc_sys_parser::{schedstat, schedstat::ProcSchedStat};
 
 let proc_schedstat = schedstat::read();
@@ -74,7 +74,7 @@ ProcSchedStat {
              [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+             [0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
 }
 ```
 (edited for readability)
@@ -99,7 +99,7 @@ The values are in kilobytes (kB), just like the values in the original `/proc/me
 file.
 
 Here is an example obtaining the data from `/proc/meminfo`:
-```rust
+```no_run
 use proc_sys_parser::{meminfo, meminfo::ProcMemInfo};
 
 let proc_meminfo = meminfo::read();
@@ -162,7 +162,7 @@ ProcMemInfo {
     hugepages_rsvd: 0,
     hugepages_surp: 0,
     hugepagesize: 2048,
-    hugetlb: 0
+    hugetlb: 0,
 }
 ```
 (edited for readability)
@@ -172,7 +172,7 @@ The processor of `/proc/diskstats` reads the statistics for the block devices. T
 in sectors, which are documented as hard coded to 512 bytes per sector in the linux kernel.
 
 Here is an example obtaining the disk statistics from `/proc/diskstats`:
-```rust
+```no_run
 use proc_sys_parser::{diskstats, diskstats::ProcDiskStats};
 
 let proc_diskstats = diskstats::read();
@@ -195,8 +195,8 @@ ProcDiskStats {
             DiskStats { block_major: 253, block_minor: 1, device_name: "vda1", reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: 7151, discards_merged: 0, discards_sectors: 87803128, discards_time_spent_ms: 394, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
             DiskStats { block_major: 253, block_minor: 15, device_name: "vda15", reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: 1, discards_merged: 0, discards_sectors: 186691, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
             DiskStats { block_major: 259, block_minor: 0, device_name: "vda16", reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: 27, discards_merged: 0, discards_sectors: 1630688, discards_time_spent_ms: 1, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 11, block_minor: 0, device_name: "sr0", reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 }
-    ]}
+            DiskStats { block_major: 11, block_minor: 0, device_name: "sr0", reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
+    ]
 }
 ```
 (edited for readability)
@@ -207,7 +207,7 @@ The processor of `/proc/net/dev` reads the statistics for the network devices.
 The documentation for `/proc/net/dev` is found here: <https://www.kernel.org/doc/Documentation/filesystems/proc.txt>
 
 Here is an example obtaining the data from `/proc/net/dev`:
-```rust
+```no_run
 use proc_sys_parser::{net_dev, net_dev::ProcNetDev};
 
 let proc_net_dev = net_dev::read();
