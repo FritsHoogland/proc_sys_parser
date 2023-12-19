@@ -172,10 +172,9 @@ impl ProcSchedStat {
     {
         let proc_schedstat_line = match proc_schedstat_line {
             line if line.starts_with("cpu") => {
-                line.split_whitespace().enumerate()
-                    .map(|(nr, cpu)| if cpu.starts_with("cpu") { (nr, cpu.strip_prefix("cpu").unwrap()) } else { (nr, cpu) } )
-                    .map(|(nr, number)| (nr, number.parse::<u64>().unwrap()))
-                    .map(|(_, number)| number)
+                line.split_whitespace()
+                    .map(|cpu| if cpu.starts_with("cpu") { cpu.strip_prefix("cpu").unwrap() } else { cpu } )
+                    .map(|number| number.parse::<u64>().unwrap())
                     .collect()
             },
             line if line.starts_with("domain") => {

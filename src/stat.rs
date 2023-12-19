@@ -241,7 +241,7 @@ impl CpuStat {
     {
         // Note: time in jiffies, must be divided by CLK_TCK to show time in seconds.
         // CLK_TCK is set by CONFIG_HZ and is 100 on most enterprise linuxes.
-        let clock_time = sysconf(SysconfVar::CLK_TCK).unwrap_or(Some(1)).unwrap_or(1) as u64;
+        let clock_time = sysconf(SysconfVar::CLK_TCK).unwrap_or(Some(100)).unwrap_or(100) as u64;
 
         let mut splitted = proc_stat_cpu_line.split_whitespace();
         CpuStat {
