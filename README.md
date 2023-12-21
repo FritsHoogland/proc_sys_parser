@@ -225,4 +225,106 @@ ProcNetDev {
 ```
 (edited for readability)
 
+## `/sys/block/<device>`
+The processor of `/sys/block` reads the block device directories, and parses the statistics in it.
+
+The documentation for `/sys/block` is found here: <https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-block>
+
+Here is an example obtaining the data from `/sys/block`:
+```no_run
+use proc_sys_parser::block;
+
+let block = block::read();
+
+println!("{:#?}", block);
+```
+Example output:
+```
+SysBlock {
+    block_devices: [
+        BlockDevice {
+            dev_block_major: 253,
+            dev_block_minor: 0,
+            device_name: "sda",
+            discard_alignment: 0,
+            stat_reads_completed_success: 9718,
+            stat_reads_merged: 3826,
+            stat_reads_sectors: 1052371,
+            stat_reads_time_spent_ms: 3026,
+            stat_writes_completed_success: 2856,
+            stat_writes_merged: 2331,
+            stat_writes_sectors: 312397,
+            stat_writes_time_spent_ms: 1947,
+            stat_ios_in_progress: 0,
+            stat_ios_time_spent_ms: 6004,
+            stat_ios_weighted_time_spent_ms: 5554,
+            stat_discards_completed_success: Some(
+                7141,
+            ),
+            stat_discards_merged: Some(
+                0,
+            ),
+            stat_discards_sectors: Some(
+                88014755,
+            ),
+            stat_discards_time_spent_ms: Some(
+                276,
+            ),
+            stat_flush_requests_completed_success: Some(
+                591,
+            ),
+            stat_flush_requests_time_spent_ms: Some(
+                304,
+            ),
+            alignment_offset: 0,
+            cache_type: "write back",
+            diskseq: 9,
+            hidden: 0,
+            inflight_reads: 1,
+            inflight_writes: 2,
+            range: 16,
+            removable: 0,
+            ro: 0,
+            size: 125829120,
+            queue_max_hw_sectors_kb: 2147483647,
+            queue_max_sectors_kb: 1280,
+            queue_max_discard_segments: 1,
+            queue_nr_requests: 256,
+            queue_nr_zones: Some(
+                0,
+            ),
+            queue_scheduler: "none",
+            queue_rotational: 1,
+            queue_dax: 0,
+            queue_add_random: 0,
+            queue_discard_granularity: 512,
+            queue_discard_max_hw_bytes: 2147483136,
+            queue_discard_max_bytes: 2147483136,
+            queue_hw_sector_size: 512,
+            queue_io_poll: 0,
+            queue_io_poll_delay: -1,
+            queue_logical_block_size: 512,
+            queue_minimum_io_size: 512,
+            queue_max_integrity_segments: 0,
+            queue_max_segments: 254,
+            queue_max_segment_size: 4294967295,
+            queue_nomerges: 0,
+            queue_physical_block_size: 512,
+            queue_optimal_io_size: 0,
+            queue_read_ahead_kb: 128,
+            queue_rq_affinity: 1,
+            queue_write_cache: "write back",
+            queue_write_same_max_bytes: 0,
+            queue_chunk_sectors: Some(
+                0,
+            ),
+            queue_zoned: Some(
+                "none",
+            ),
+        },
+    ],
+}
+```
+(edited for readability)
+
 License: Apache-2.0

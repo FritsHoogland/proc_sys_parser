@@ -68,20 +68,20 @@ pub struct CpuStat {
     /// idle time in milliseconds
     pub idle: u64,
     /// idle time in milliseconds attributed to performing IO
-    pub iowait: u64,
+    pub iowait: Option<u64>,
     /// irq time in milliseconds
-    pub irq: u64,
+    pub irq: Option<u64>,
     /// softirq time in milliseconds
-    pub softirq: u64,
+    pub softirq: Option<u64>,
     /// steal time in milliseconds
     /// Introduced with kernel version 2.6.11
-    pub steal: u64,
+    pub steal: Option<u64>,
     /// guest user time in milliseconds
     /// Introduced with kernel version 2.6.24
-    pub guest: u64,
+    pub guest: Option<u64>,
     /// guest user time reniced in milliseconds
     /// Introduced with kernel version 2.6.24
-    pub guest_nice: u64,
+    pub guest_nice: Option<u64>,
 }
 
 /// Builder pattern for [`ProcStat`]
@@ -229,12 +229,12 @@ impl CpuStat {
             nice: 0,
             system: 0,
             idle: 0,
-            iowait: 0,
-            irq: 0,
-            softirq: 0,
-            steal: 0,
-            guest: 0,
-            guest_nice: 0,
+            iowait: None,
+            irq: None,
+            softirq: None,
+            steal: None,
+            guest: None,
+            guest_nice: None,
         }
     }
     pub fn generate_cpu_times(proc_stat_cpu_line: &str) -> CpuStat
@@ -250,12 +250,26 @@ impl CpuStat {
             nice: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
             system: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
             idle: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            iowait: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
-            irq: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
-            softirq: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
-            steal: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
-            guest: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
-            guest_nice: ((splitted.next().unwrap_or_default().parse::<u64>().unwrap_or_default()*1000_u64)/clock_time),
+            iowait: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            irq: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            softirq: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            steal: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            guest: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            guest_nice: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+        }
+    }
+    fn parse_next_and_conversion_into_option_milliseconds(result: Option<&str>, clock_time: u64) -> Option<u64>
+    {
+        match result
+        {
+            None => None,
+            Some(value) => {
+                match value.parse::<u64>()
+                {
+                    Err(_) => None,
+                    Ok(number) => Some((number*1000_u64)/clock_time),
+                }
+            },
         }
     }
 }
@@ -273,7 +287,7 @@ mod tests {
     fn parse_cpu_line() {
         let cpu_line = "cpu  101521 47 66467 43586274 7651 0 1367 0 0 0";
         let result = CpuStat::generate_cpu_times(&cpu_line);
-        assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:76510, irq:0, softirq:13670, steal:0, guest:0, guest_nice:0 });
+        assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:Some(76510), irq:Some(0), softirq:Some(13670), steal:Some(0), guest:Some(0), guest_nice:Some(0) });
     }
 
     // This mimics a (much) lower linux version which provides lesser statistics
@@ -282,7 +296,7 @@ mod tests {
     fn parse_cpu_line_with_less_statistics() {
         let cpu_line = "cpu  101521 47 66467 43586274";
         let result = CpuStat::generate_cpu_times(&cpu_line);
-        assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:0, irq:0, softirq:0, steal:0, guest:0, guest_nice:0 });
+        assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:None, irq:None, softirq:None, steal:None, guest:None, guest_nice:None });
     }
 
 
@@ -318,13 +332,13 @@ procs_running 1
 procs_blocked 0
 softirq 7616206 32 1416021 213 1102885 11 0 1409 2270709 0 2824926";
         let result = ProcStat::parse_proc_stat_output(proc_stat);
-        assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 1015210, nice: 470, system: 664670, idle: 435862740, iowait: 76510, irq: 0, softirq: 13670, steal: 0, guest: 0, guest_nice: 0 },
-            cpu_individual: vec![CpuStat { name: "cpu0".to_string(), user: 162980, nice: 0, system: 115900, idle: 72592620, iowait: 12130, irq: 0, softirq: 8460, steal: 0, guest: 0, guest_nice: 0 },
-                                 CpuStat { name: "cpu1".to_string(), user: 162720, nice: 0, system: 112910, idle: 72656150, iowait: 12890, irq: 0, softirq: 1100, steal: 0, guest: 0, guest_nice: 0 },
-                                 CpuStat { name: "cpu2".to_string(), user: 161210, nice: 470, system: 109860, idle: 72663580, iowait: 12510, irq: 0, softirq: 1110, steal: 0, guest: 0, guest_nice: 0 },
-                                 CpuStat { name: "cpu3".to_string(), user: 177860, nice: 0, system: 110230, idle: 72647150, iowait: 13500, irq: 0, softirq: 1160, steal: 0, guest: 0, guest_nice: 0 },
-                                 CpuStat { name: "cpu4".to_string(), user: 174260, nice: 0, system: 107360, idle: 72654910, iowait: 11950, irq: 0, softirq: 790, steal: 0, guest: 0, guest_nice: 0 },
-                                 CpuStat { name: "cpu5".to_string(), user: 176160, nice: 0, system: 108400, idle: 72648320, iowait: 13510, irq: 0, softirq: 1030, steal: 0, guest: 0, guest_nice: 0 }],
+        assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 1015210, nice: 470, system: 664670, idle: 435862740, iowait: Some(76510), irq: Some(0), softirq: Some(13670), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+            cpu_individual: vec![CpuStat { name: "cpu0".to_string(), user: 162980, nice: 0, system: 115900, idle: 72592620, iowait: Some(12130), irq: Some(0), softirq: Some(8460), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+                                 CpuStat { name: "cpu1".to_string(), user: 162720, nice: 0, system: 112910, idle: 72656150, iowait: Some(12890), irq: Some(0), softirq: Some(1100), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+                                 CpuStat { name: "cpu2".to_string(), user: 161210, nice: 470, system: 109860, idle: 72663580, iowait: Some(12510), irq: Some(0), softirq: Some(1110), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+                                 CpuStat { name: "cpu3".to_string(), user: 177860, nice: 0, system: 110230, idle: 72647150, iowait: Some(13500), irq: Some(0), softirq: Some(1160), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+                                 CpuStat { name: "cpu4".to_string(), user: 174260, nice: 0, system: 107360, idle: 72654910, iowait: Some(11950), irq: Some(0), softirq: Some(790), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+                                 CpuStat { name: "cpu5".to_string(), user: 176160, nice: 0, system: 108400, idle: 72648320, iowait: Some(13510), irq: Some(0), softirq: Some(1030), steal: Some(0), guest: Some(0), guest_nice: Some(0) }],
             interrupts: vec![21965856, 0, 520030, 7300523, 0, 0, 0, 2, 0, 0, 0, 12267292, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 644, 0, 0, 0, 0, 0, 2, 0, 77822, 81889, 80164, 70697, 68349, 79207, 0, 0, 0, 6172, 6117, 6131, 5983, 6483, 6062, 0, 588204, 437602, 0, 0, 1202, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 355279, 0, 0],
             context_switches: 36432936,
             boot_time: 1701783048,
@@ -350,8 +364,8 @@ softirq 100 0 1 1";
         write("/tmp/_test_proc_stat", proc_stat).expect("Error writing to /tmp/_test_proc_stat");
         let result = Builder::new().file_name("/tmp/_test_proc_stat").read();
         remove_file("/tmp/_test_proc_stat").unwrap();
-        assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 10, nice: 10, system: 10, idle: 10, iowait: 10, irq: 0, softirq: 10, steal: 0, guest: 0, guest_nice: 0 },
-            cpu_individual: vec![CpuStat { name: "cpu0".to_string(),user: 10, nice: 10, system: 10, idle: 10, iowait: 10, irq: 0, softirq: 10, steal: 0, guest: 0, guest_nice: 0 }],
+        assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 10, nice: 10, system: 10, idle: 10, iowait: Some(10), irq: Some(0), softirq: Some(10), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
+            cpu_individual: vec![CpuStat { name: "cpu0".to_string(),user: 10, nice: 10, system: 10, idle: 10, iowait: Some(10), irq: Some(0), softirq: Some(10), steal: Some(0), guest: Some(0), guest_nice: Some(0) }],
             interrupts: vec![100, 0, 1, 1],
             context_switches: 100,
             boot_time: 100,
