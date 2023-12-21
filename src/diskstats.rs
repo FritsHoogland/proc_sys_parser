@@ -1,5 +1,7 @@
 /*!
 Read data from `/proc/diskstats` into the struct [`ProcDiskStats`].
+`/proc/diskstats` contains statistics of both block devices and partitions inside the blockdevices.
+A more comprehensive view of block devices only can be found in the module Block.
 
 The documentation for `/proc/diskstats` is found here: <https://www.kernel.org/doc/Documentation/iostats.txt>
 And here: <https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats>.
@@ -115,17 +117,17 @@ pub struct DiskStats
     pub ios_time_spent_ms: u64,
     pub ios_weighted_time_spent_ms: u64,
     /// kernel 4.18+
-    pub discards_completed_success: u64,
+    pub discards_completed_success: Option<u64>,
     /// kernel 4.18+
-    pub discards_merged: u64,
+    pub discards_merged: Option<u64>,
     /// kernel 4.18+
-    pub discards_sectors: u64,
+    pub discards_sectors: Option<u64>,
     /// kernel 4.18+
-    pub discards_time_spent_ms: u64,
+    pub discards_time_spent_ms: Option<u64>,
     /// kernel 5.5+
-    pub flush_requests_completed_success: u64,
+    pub flush_requests_completed_success: Option<u64>,
     /// kernel 5.5+
-    pub flush_requests_time_spent_ms: u64,
+    pub flush_requests_time_spent_ms: Option<u64>,
 }
 
 impl ProcDiskStats {
@@ -164,14 +166,27 @@ impl ProcDiskStats {
             ios_in_progress: fields.next().unwrap().parse::<u64>().unwrap(),
             ios_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
             ios_weighted_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
-            discards_completed_success: fields.next().unwrap_or("0").parse::<u64>().unwrap(),
-            discards_merged: fields.next().unwrap_or("0").parse::<u64>().unwrap(),
-            discards_sectors: fields.next().unwrap_or("0").parse::<u64>().unwrap(),
-            discards_time_spent_ms: fields.next().unwrap_or("0").parse::<u64>().unwrap(),
-            flush_requests_completed_success: fields.next().unwrap_or("0").parse::<u64>().unwrap(),
-            flush_requests_time_spent_ms: fields.next().unwrap_or("0").parse::<u64>().unwrap(),
+            discards_completed_success: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
+            discards_merged: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
+            discards_sectors: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
+            discards_time_spent_ms: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
+            flush_requests_completed_success: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
+            flush_requests_time_spent_ms: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
         }
-
+    }
+    fn parse_next_and_conversion_into_option_u64(result: Option<&str>) -> Option<u64>
+    {
+        match result
+        {
+            None => None,
+            Some(value) => {
+                match value.parse::<u64>()
+                {
+                    Err(_) => None,
+                    Ok(number) => Some(number),
+                }
+            }
+        }
     }
     pub fn read_proc_diskstats(proc_diskstats_file: &str) -> ProcDiskStats
     {
@@ -203,12 +218,12 @@ mod tests {
             ios_in_progress: 9,
             ios_time_spent_ms: 10,
             ios_weighted_time_spent_ms: 11,
-            discards_completed_success: 12,
-            discards_merged: 13,
-            discards_sectors: 14,
-            discards_time_spent_ms: 15,
-            flush_requests_completed_success: 16,
-            flush_requests_time_spent_ms: 17
+            discards_completed_success: Some(12),
+            discards_merged: Some(13),
+            discards_sectors: Some(14),
+            discards_time_spent_ms: Some(15),
+            flush_requests_completed_success: Some(16),
+            flush_requests_time_spent_ms: Some(17),
         });
     }
     #[test]
@@ -229,12 +244,12 @@ mod tests {
             ios_in_progress: 9,
             ios_time_spent_ms: 10,
             ios_weighted_time_spent_ms: 11,
-            discards_completed_success: 0,
-            discards_merged: 0,
-            discards_sectors: 0,
-            discards_time_spent_ms: 0,
-            flush_requests_completed_success: 0,
-            flush_requests_time_spent_ms: 0
+            discards_completed_success: None,
+            discards_merged: None,
+            discards_sectors: None,
+            discards_time_spent_ms: None,
+            flush_requests_completed_success: None,
+            flush_requests_time_spent_ms: None
         });
     }
 
@@ -256,19 +271,19 @@ mod tests {
         let result = ProcDiskStats::parse_proc_diskstats(proc_diskstats);
         assert_eq!(result, ProcDiskStats {
             disk_stats: vec![
-                DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 1, device_name: "loop1".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 2, device_name: "loop2".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 3, device_name: "loop3".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 4, device_name: "loop4".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 5, device_name: "loop5".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 6, device_name: "loop6".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 7, device_name: "loop7".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: 7179, discards_merged: 0, discards_sectors: 89620507, discards_time_spent_ms: 396, flush_requests_completed_success: 3929, flush_requests_time_spent_ms: 2019 },
-                DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: 7151, discards_merged: 0, discards_sectors: 87803128, discards_time_spent_ms: 394, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 253, block_minor: 15, device_name: "vda15".to_string(), reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: 1, discards_merged: 0, discards_sectors: 186691, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 259, block_minor: 0, device_name: "vda16".to_string(), reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: 27, discards_merged: 0, discards_sectors: 1630688, discards_time_spent_ms: 1, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 11, block_minor: 0, device_name: "sr0".to_string(), reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 }
+                DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 1, device_name: "loop1".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 2, device_name: "loop2".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 3, device_name: "loop3".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 4, device_name: "loop4".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 5, device_name: "loop5".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 6, device_name: "loop6".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 7, block_minor: 7, device_name: "loop7".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: Some(7179), discards_merged: Some(0), discards_sectors: Some(89620507), discards_time_spent_ms: Some(396), flush_requests_completed_success: Some(3929), flush_requests_time_spent_ms: Some(2019) },
+                DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: Some(7151), discards_merged: Some(0), discards_sectors: Some(87803128), discards_time_spent_ms: Some(394), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 253, block_minor: 15, device_name: "vda15".to_string(), reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: Some(1), discards_merged: Some(0), discards_sectors: Some(186691), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 259, block_minor: 0, device_name: "vda16".to_string(), reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: Some(27), discards_merged: Some(0), discards_sectors: Some(1630688), discards_time_spent_ms: Some(1), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+                DiskStats { block_major: 11, block_minor: 0, device_name: "sr0".to_string(), reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) }
             ]
         });
     }
@@ -292,19 +307,35 @@ mod tests {
         let result = Builder::new().file_name("/tmp/_test_proc_diskstats").read();
         remove_file("/tmp/_test_proc_diskstats").unwrap();
         assert_eq!(result, ProcDiskStats { disk_stats: vec![
-            DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 1, device_name: "loop1".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 2, device_name: "loop2".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 3, device_name: "loop3".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 4, device_name: "loop4".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 5, device_name: "loop5".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 6, device_name: "loop6".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 7, block_minor: 7, device_name: "loop7".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: 7179, discards_merged: 0, discards_sectors: 89620507, discards_time_spent_ms: 396, flush_requests_completed_success: 3929, flush_requests_time_spent_ms: 2019 },
-            DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: 7151, discards_merged: 0, discards_sectors: 87803128, discards_time_spent_ms: 394, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 253, block_minor: 15, device_name: "vda15".to_string(), reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: 1, discards_merged: 0, discards_sectors: 186691, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 259, block_minor: 0, device_name: "vda16".to_string(), reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: 27, discards_merged: 0, discards_sectors: 1630688, discards_time_spent_ms: 1, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-            DiskStats { block_major: 11, block_minor: 0, device_name: "sr0".to_string(), reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 }
+            DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 1, device_name: "loop1".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 2, device_name: "loop2".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 3, device_name: "loop3".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 4, device_name: "loop4".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 5, device_name: "loop5".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 6, device_name: "loop6".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 7, block_minor: 7, device_name: "loop7".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: Some(7179), discards_merged: Some(0), discards_sectors: Some(89620507), discards_time_spent_ms: Some(396), flush_requests_completed_success: Some(3929), flush_requests_time_spent_ms: Some(2019) },
+            DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: Some(7151), discards_merged: Some(0), discards_sectors: Some(87803128), discards_time_spent_ms: Some(394), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 253, block_minor: 15, device_name: "vda15".to_string(), reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: Some(1), discards_merged: Some(0), discards_sectors: Some(186691), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 259, block_minor: 0, device_name: "vda16".to_string(), reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: Some(27), discards_merged: Some(0), discards_sectors: Some(1630688), discards_time_spent_ms: Some(1), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
+            DiskStats { block_major: 11, block_minor: 0, device_name: "sr0".to_string(), reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) }
+        ]});
+    }
+    #[test]
+    fn create_proc_diskstats_file_with_pre_kernel_4_18_fields_removed_and_read() {
+        let proc_diskstats = " 253       0 vda 13534 4237 1645451 3763 10172 10577 1730555 12701 0 23356 18881
+ 253       1 vda1 13192 2675 1623109 3692 10151 10555 1730312 12688 0 23324 16775
+ 253      15 vda15 136 1547 9919 20 1 0 1 0 0 52 21
+ 259       0 vda16 159 15 10711 31 20 22 242 12 0 108 46";
+        write("/tmp/_test_proc_diskstats", proc_diskstats).expect("Error writing to /tmp/_test_proc_diskstats");
+        let result = Builder::new().file_name("/tmp/_test_proc_diskstats").read();
+        remove_file("/tmp/_test_proc_diskstats").unwrap();
+        assert_eq!(result, ProcDiskStats { disk_stats: vec![
+            DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: None, discards_merged: None, discards_sectors: None, discards_time_spent_ms: None, flush_requests_completed_success: None, flush_requests_time_spent_ms: None },
+            DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: None, discards_merged: None, discards_sectors: None, discards_time_spent_ms: None, flush_requests_completed_success: None, flush_requests_time_spent_ms: None },
+            DiskStats { block_major: 253, block_minor: 15, device_name: "vda15".to_string(), reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: None, discards_merged: None, discards_sectors: None, discards_time_spent_ms: None, flush_requests_completed_success: None, flush_requests_time_spent_ms: None },
+            DiskStats { block_major: 259, block_minor: 0, device_name: "vda16".to_string(), reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: None, discards_merged: None, discards_sectors: None, discards_time_spent_ms: None, flush_requests_completed_success: None, flush_requests_time_spent_ms: None },
         ]});
     }
 }

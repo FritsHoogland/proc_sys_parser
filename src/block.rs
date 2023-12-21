@@ -27,7 +27,7 @@ by default, use:
 ```no_run
 use proc_sys_parser::{block, block::{SysBlock, Builder}};
 
-let proc_block = Builder::new().path("/mysys/block").read();
+let proc_block = Builder::new().path("/my-sys/block").read();
 ```
 */
 use std::io::Error;
@@ -328,46 +328,21 @@ impl SysBlock {
            block_devices: vec![],
         }
     }
-    fn parse_stat(
+    fn parse_alignment_offset(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
     )
     {
-        let stat_contents = read_to_string(blockdevice_dir.path().join("stat")).unwrap_or_else(|error| panic!("Error {} reading block device stat sysfs entry", error));
-        let mut fields = stat_contents.split_whitespace();
-        blockdevice_data.stat_reads_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_reads_merged = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_reads_sectors = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_reads_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_merged = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_sectors = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_ios_in_progress = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_ios_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_ios_weighted_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_discards_completed_success = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_discards_merged = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_discards_sectors = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_discards_time_spent_ms = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_flush_requests_completed_success = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_flush_requests_time_spent_ms = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+        let alignment_offset = read_to_string(blockdevice_dir.path().join("alignment_offset")).unwrap_or_else(|error| panic!("Error {} reading block device alignment_offset sysfs entry", error));
+        blockdevice_data.alignment_offset = alignment_offset.parse::<u64>().unwrap();
     }
-    fn parse_next_and_conversion_into_option_u64(result: Option<&str>) -> Option<u64>
+    fn parse_cache_type(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
     {
-        match result
-        {
-            None => None,
-            Some(value) => {
-                match value.parse::<u64>()
-                {
-                    Err(_) => None,
-                    Ok(number) => {
-                        Some(number)
-                    },
-                }
-            },
-        }
+        let cache_type = read_to_string(blockdevice_dir.path().join("cache_type")).unwrap_or_else(|error| panic!("Error {} reading block device cache_type sysfs entry", error));
+        blockdevice_data.cache_type = cache_type;
     }
     fn parse_dev(
         blockdevice_data: &mut BlockDevice,
@@ -378,15 +353,6 @@ impl SysBlock {
         let mut fields = dev_contents.split(':');
         blockdevice_data.dev_block_major = fields.next().unwrap().parse::<u64>().unwrap();
         blockdevice_data.dev_block_minor = fields.next().unwrap().parse::<u64>().unwrap();
-    }
-
-    fn parse_alignment_offset(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let alignment_offset = read_to_string(blockdevice_dir.path().join("alignment_offset")).unwrap_or_else(|error| panic!("Error {} reading block device alignment_offset sysfs entry", error));
-        blockdevice_data.alignment_offset = alignment_offset.parse::<u64>().unwrap();
     }
     fn parse_discard_alignment(
         blockdevice_data: &mut BlockDevice,
@@ -412,38 +378,6 @@ impl SysBlock {
         let hidden = read_to_string(blockdevice_dir.path().join("hidden")).unwrap_or_else(|error| panic!("Error {} reading block device hidden sysfs entry", error));
         blockdevice_data.hidden = hidden.parse::<u64>().unwrap();
     }
-    fn parse_range(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let range = read_to_string(blockdevice_dir.path().join("range")).unwrap_or_else(|error| panic!("Error {} reading block device range sysfs entry", error));
-        blockdevice_data.range = range.parse::<u64>().unwrap();
-    }
-    fn parse_removable(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let removable = read_to_string(blockdevice_dir.path().join("removable")).unwrap_or_else(|error| panic!("Error {} reading block device removable sysfs entry", error));
-        blockdevice_data.removable = removable.parse::<u64>().unwrap();
-    }
-    fn parse_ro(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let ro = read_to_string(blockdevice_dir.path().join("ro")).unwrap_or_else(|error| panic!("Error {} reading block device ro sysfs entry", error));
-        blockdevice_data.ro = ro.parse::<u64>().unwrap();
-    }
-    fn parse_size(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let size = read_to_string(blockdevice_dir.path().join("size")).unwrap_or_else(|error| panic!("Error {} reading block device size sysfs entry", error));
-        blockdevice_data.size = size.parse::<u64>().unwrap();
-    }
     fn parse_inflight(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
@@ -453,13 +387,93 @@ impl SysBlock {
         blockdevice_data.inflight_reads = inflight_from_file.split_whitespace().nth(0).unwrap().parse::<u64>().unwrap();
         blockdevice_data.inflight_writes = inflight_from_file.split_whitespace().nth(1).unwrap().parse::<u64>().unwrap();
     }
-    fn parse_cache_type(
+    fn parse_queue_add_random(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
     )
     {
-        let cache_type = read_to_string(blockdevice_dir.path().join("cache_type")).unwrap_or_else(|error| panic!("Error {} reading block device cache_type sysfs entry", error));
-        blockdevice_data.cache_type = cache_type;
+        let add_random = read_to_string(blockdevice_dir.path().join("queue").join("add_random")).unwrap_or_else(|error| panic!("Error {} reading block device queue/add_random sysfs entry", error));
+        blockdevice_data.queue_add_random = add_random.parse::<u64>().unwrap();
+    }
+    pub fn parse_queue_chunk_sectors(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let chunk_sectors = read_to_string(blockdevice_dir.path().join("queue").join("chunk_sectors"));
+        blockdevice_data.queue_chunk_sectors = SysBlock::parse_read_and_conversion_into_option_u64(chunk_sectors);
+    }
+    fn parse_queue_dax(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let dax = read_to_string(blockdevice_dir.path().join("queue").join("dax")).unwrap_or_else(|error| panic!("Error {} reading block device queue/dax sysfs entry", error));
+        blockdevice_data.queue_dax = dax.parse::<u64>().unwrap();
+    }
+    fn parse_queue_discard_granularity(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let discard_granularity = read_to_string(blockdevice_dir.path().join("queue").join("discard_granularity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_granularity sysfs entry", error));
+        blockdevice_data.queue_discard_granularity = discard_granularity.parse::<u64>().unwrap();
+    }
+    fn parse_queue_discard_max_bytes(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let discard_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_bytes sysfs entry", error));
+        blockdevice_data.queue_discard_max_bytes = discard_max_bytes.parse::<u64>().unwrap();
+    }
+    fn parse_queue_discard_max_hw_bytes(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let discard_max_hw_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_hw_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_hw_bytes sysfs entry", error));
+        blockdevice_data.queue_discard_max_hw_bytes = discard_max_hw_bytes.parse::<u64>().unwrap();
+    }
+    fn parse_queue_hw_sector_size(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let hw_sector_rize = read_to_string(blockdevice_dir.path().join("queue").join("hw_sector_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/hw_sector_size sysfs entry", error));
+        blockdevice_data.queue_hw_sector_size = hw_sector_rize.parse::<u64>().unwrap();
+    }
+    fn parse_queue_io_poll(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let io_poll = read_to_string(blockdevice_dir.path().join("queue").join("io_poll")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll sysfs entry", error));
+        blockdevice_data.queue_io_poll = io_poll.parse::<u64>().unwrap();
+    }
+    fn parse_queue_io_poll_delay(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let io_poll_delay = read_to_string(blockdevice_dir.path().join("queue").join("io_poll_delay")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll_delay sysfs entry", error));
+        blockdevice_data.queue_io_poll_delay = io_poll_delay.parse::<i64>().unwrap();
+    }
+    fn parse_queue_logical_block_size(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let logical_block_size = read_to_string(blockdevice_dir.path().join("queue").join("logical_block_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/logical_block_size sysfs entry", error));
+        blockdevice_data.queue_logical_block_size = logical_block_size.parse::<u64>().unwrap();
+    }
+    fn parse_queue_max_discard_segments(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let max_discard_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_discard_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_discard_segments sysfs entry", error));
+        blockdevice_data.queue_max_discard_segments = max_discard_segments.parse::<u64>().unwrap();
     }
     fn parse_queue_max_hw_sectors_kb(
         blockdevice_data: &mut BlockDevice,
@@ -469,14 +483,6 @@ impl SysBlock {
         let max_hw_sectors_kb_contents = read_to_string(blockdevice_dir.path().join("queue").join("max_hw_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_hw_sectors_kb sysfs entry", error));
         blockdevice_data.queue_max_hw_sectors_kb = max_hw_sectors_kb_contents.parse::<u64>().unwrap();
     }
-    fn parse_queue_max_sectors_kb(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let max_sectors_kb = read_to_string(blockdevice_dir.path().join("queue").join("max_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_sectors_kb sysfs entry", error));
-        blockdevice_data.queue_max_sectors_kb = max_sectors_kb.parse::<u64>().unwrap();
-    }
     fn parse_queue_max_integrity_segments(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
@@ -484,6 +490,14 @@ impl SysBlock {
     {
         let max_integrity_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_integrity_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_integrity_segments sysfs entry", error));
         blockdevice_data.queue_max_integrity_segments = max_integrity_segments.parse::<u64>().unwrap();
+    }
+    fn parse_queue_max_sectors_kb(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let max_sectors_kb = read_to_string(blockdevice_dir.path().join("queue").join("max_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_sectors_kb sysfs entry", error));
+        blockdevice_data.queue_max_sectors_kb = max_sectors_kb.parse::<u64>().unwrap();
     }
     fn parse_queue_max_segment_size(
         blockdevice_data: &mut BlockDevice,
@@ -517,14 +531,6 @@ impl SysBlock {
         let nomerges = read_to_string(blockdevice_dir.path().join("queue").join("nomerges")).unwrap_or_else(|error| panic!("Error {} reading block device queue/nomerges sysfs entry", error));
         blockdevice_data.queue_nomerges = nomerges.parse::<u64>().unwrap();
     }
-    fn parse_queue_max_discard_segments(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let max_discard_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_discard_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_discard_segments sysfs entry", error));
-        blockdevice_data.queue_max_discard_segments = max_discard_segments.parse::<u64>().unwrap();
-    }
     fn parse_queue_nr_requests(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
@@ -532,6 +538,14 @@ impl SysBlock {
     {
         let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("nr_requests")).unwrap_or_else(|error| panic!("Error {} reading block device queue/nr_requests sysfs entry", error));
         blockdevice_data.queue_nr_requests = nr_requests.parse::<u64>().unwrap();
+    }
+    pub fn parse_queue_nr_zones(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let nr_zones = read_to_string(blockdevice_dir.path().join("queue").join("nr_zones"));
+        blockdevice_data.queue_nr_zones = SysBlock::parse_read_and_conversion_into_option_u64(nr_zones);
     }
     fn parse_queue_optimal_io_size(
         blockdevice_data: &mut BlockDevice,
@@ -573,126 +587,6 @@ impl SysBlock {
         let rq_affinity = read_to_string(blockdevice_dir.path().join("queue").join("rq_affinity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/rq_affinity sysfs entry", error));
         blockdevice_data.queue_rq_affinity = rq_affinity.parse::<u64>().unwrap();
     }
-    fn parse_queue_dax(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let dax = read_to_string(blockdevice_dir.path().join("queue").join("dax")).unwrap_or_else(|error| panic!("Error {} reading block device queue/dax sysfs entry", error));
-        blockdevice_data.queue_dax = dax.parse::<u64>().unwrap();
-    }
-    fn parse_queue_add_random(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let add_random = read_to_string(blockdevice_dir.path().join("queue").join("add_random")).unwrap_or_else(|error| panic!("Error {} reading block device queue/add_random sysfs entry", error));
-        blockdevice_data.queue_add_random = add_random.parse::<u64>().unwrap();
-    }
-    fn parse_queue_discard_granularity(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let discard_granularity = read_to_string(blockdevice_dir.path().join("queue").join("discard_granularity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_granularity sysfs entry", error));
-        blockdevice_data.queue_discard_granularity = discard_granularity.parse::<u64>().unwrap();
-    }
-    fn parse_queue_hw_sector_size(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let hw_sector_rize = read_to_string(blockdevice_dir.path().join("queue").join("hw_sector_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/hw_sector_size sysfs entry", error));
-        blockdevice_data.queue_hw_sector_size = hw_sector_rize.parse::<u64>().unwrap();
-    }
-    fn parse_queue_io_poll(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let io_poll = read_to_string(blockdevice_dir.path().join("queue").join("io_poll")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll sysfs entry", error));
-        blockdevice_data.queue_io_poll = io_poll.parse::<u64>().unwrap();
-    }
-    fn parse_queue_io_poll_delay(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let io_poll_delay = read_to_string(blockdevice_dir.path().join("queue").join("io_poll_delay")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll_delay sysfs entry", error));
-        blockdevice_data.queue_io_poll_delay = io_poll_delay.parse::<i64>().unwrap();
-    }
-    fn parse_queue_logical_block_size(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let logical_block_size = read_to_string(blockdevice_dir.path().join("queue").join("logical_block_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/logical_block_size sysfs entry", error));
-        blockdevice_data.queue_logical_block_size = logical_block_size.parse::<u64>().unwrap();
-    }
-    fn parse_queue_discard_max_bytes(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let discard_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_bytes sysfs entry", error));
-        blockdevice_data.queue_discard_max_bytes = discard_max_bytes.parse::<u64>().unwrap();
-    }
-    fn parse_queue_discard_max_hw_bytes(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let discard_max_hw_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_hw_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_hw_bytes sysfs entry", error));
-        blockdevice_data.queue_discard_max_hw_bytes = discard_max_hw_bytes.parse::<u64>().unwrap();
-    }
-    pub fn parse_queue_chunk_sectors(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let chunk_sectors = read_to_string(blockdevice_dir.path().join("queue").join("chunk_sectors"));
-        blockdevice_data.queue_chunk_sectors = SysBlock::parse_read_and_conversion_into_option_u64(chunk_sectors);
-    }
-    pub fn parse_queue_nr_zones(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let nr_zones = read_to_string(blockdevice_dir.path().join("queue").join("nr_zones"));
-        blockdevice_data.queue_nr_zones = SysBlock::parse_read_and_conversion_into_option_u64(nr_zones);
-    }
-    fn parse_read_and_conversion_into_option_u64(result: Result<String, Error>) -> Option<u64>
-    {
-        match result
-        {
-            Err(_) => None,
-            Ok(value) => {
-                match value.parse::<u64>()
-                {
-                    Err(_) => None,
-                    Ok(number) => Some(number),
-                }
-            },
-        }
-    }
-    fn parse_queue_zoned(
-        blockdevice_data: &mut BlockDevice,
-        blockdevice_dir: &DirEntry,
-    )
-    {
-        let zoned = read_to_string(blockdevice_dir.path().join("queue").join("zoned"));
-        blockdevice_data.queue_chunk_sectors = match zoned
-        {
-            Err(_) => None,
-            Ok(value) => {
-                match value.parse::<u64>()
-                {
-                    Err(_) => None,
-                    Ok(number) => Some(number),
-                }
-            },
-        };
-    }
     fn parse_queue_scheduler(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
@@ -710,6 +604,120 @@ impl SysBlock {
             blockdevice_data.queue_scheduler = "?".to_string();
         }
     }
+    ///////
+    fn parse_queue_write_cache(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let write_cache = read_to_string(blockdevice_dir.path().join("queue").join("write_cache")).unwrap_or_else(|error| panic!("Error {} reading block device queue/write_cache sysfs entry", error));
+        blockdevice_data.queue_write_cache = write_cache;
+    }
+    pub fn parse_queue_write_same_max_bytes(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let write_same_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("write_same_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/write_same_max_bytes sysfs entry", error));
+        blockdevice_data.queue_write_same_max_bytes = write_same_max_bytes.parse::<u64>().unwrap();
+    }
+    fn parse_queue_zoned(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let zoned = read_to_string(blockdevice_dir.path().join("queue").join("zoned"));
+        blockdevice_data.queue_zoned = match zoned
+        {
+            Err(_) => None,
+            Ok(value) => Some(value),
+        };
+    }
+    fn parse_range(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let range = read_to_string(blockdevice_dir.path().join("range")).unwrap_or_else(|error| panic!("Error {} reading block device range sysfs entry", error));
+        blockdevice_data.range = range.parse::<u64>().unwrap();
+    }
+    fn parse_removable(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let removable = read_to_string(blockdevice_dir.path().join("removable")).unwrap_or_else(|error| panic!("Error {} reading block device removable sysfs entry", error));
+        blockdevice_data.removable = removable.parse::<u64>().unwrap();
+    }
+    fn parse_ro(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let ro = read_to_string(blockdevice_dir.path().join("ro")).unwrap_or_else(|error| panic!("Error {} reading block device ro sysfs entry", error));
+        blockdevice_data.ro = ro.parse::<u64>().unwrap();
+    }
+    fn parse_size(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let size = read_to_string(blockdevice_dir.path().join("size")).unwrap_or_else(|error| panic!("Error {} reading block device size sysfs entry", error));
+        blockdevice_data.size = size.parse::<u64>().unwrap();
+    }
+    fn parse_stat(
+        blockdevice_data: &mut BlockDevice,
+        blockdevice_dir: &DirEntry,
+    )
+    {
+        let stat_contents = read_to_string(blockdevice_dir.path().join("stat")).unwrap_or_else(|error| panic!("Error {} reading block device stat sysfs entry", error));
+        let mut fields = stat_contents.split_whitespace();
+        blockdevice_data.stat_reads_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_reads_merged = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_reads_sectors = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_reads_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_writes_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_writes_merged = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_writes_sectors = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_writes_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_ios_in_progress = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_ios_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_ios_weighted_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.stat_discards_completed_success = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+        blockdevice_data.stat_discards_merged = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+        blockdevice_data.stat_discards_sectors = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+        blockdevice_data.stat_discards_time_spent_ms = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+        blockdevice_data.stat_flush_requests_completed_success = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+        blockdevice_data.stat_flush_requests_time_spent_ms = SysBlock::parse_next_and_conversion_into_option_u64(fields.next());
+    }
+    fn parse_next_and_conversion_into_option_u64(result: Option<&str>) -> Option<u64>
+    {
+        match result
+        {
+            None => None,
+            Some(value) => {
+                match value.parse::<u64>()
+                {
+                    Err(_) => None,
+                    Ok(number) => Some(number),
+                }
+            },
+        }
+    }
+    fn parse_read_and_conversion_into_option_u64(result: Result<String, Error>) -> Option<u64>
+    {
+        match result
+        {
+            Err(_) => None,
+            Ok(value) => {
+                match value.parse::<u64>()
+                {
+                    Err(_) => None,
+                    Ok(number) => Some(number),
+                }
+            },
+        }
+    }
     pub fn read_sys_block_devices(sys_block_path: &str) -> SysBlock
     {
         let mut sysblock = SysBlock::new();
@@ -718,12 +726,10 @@ impl SysBlock {
 
         for blockdevice in blockdevice_directories
         {
-            let mut blockdevice_data = BlockDevice::new();
             let directory_entry = blockdevice.unwrap_or_else(|error| panic!("Error {} reading block device sysfs entry", error));
-            // device name
-            let device_name = directory_entry.file_name().into_string().unwrap();
-            blockdevice_data.device_name = device_name.to_string();
+            let mut blockdevice_data = BlockDevice::new();
 
+            blockdevice_data.device_name = directory_entry.file_name().into_string().unwrap();
             SysBlock::parse_alignment_offset(&mut blockdevice_data, &directory_entry);
             SysBlock::parse_cache_type(&mut blockdevice_data, &directory_entry);
             SysBlock::parse_dev(&mut blockdevice_data, &directory_entry);
@@ -757,6 +763,8 @@ impl SysBlock {
             SysBlock::parse_queue_rotational(&mut blockdevice_data, &directory_entry);
             SysBlock::parse_queue_rq_affinity(&mut blockdevice_data, &directory_entry);
             SysBlock::parse_queue_scheduler(&mut blockdevice_data, &directory_entry);
+            SysBlock::parse_queue_write_cache(&mut blockdevice_data, &directory_entry);
+            SysBlock::parse_queue_write_same_max_bytes(&mut blockdevice_data, &directory_entry);
             SysBlock::parse_queue_zoned(&mut blockdevice_data, &directory_entry);
 
             SysBlock::parse_range(&mut blockdevice_data, &directory_entry);
@@ -777,127 +785,337 @@ mod tests {
     use std::fs::{write, remove_dir_all, create_dir_all};
     use super::*;
 
-    /*
     #[test]
-    fn parse_proc_diskstats_line() {
-        let diskstats_line = "   7       0 loop0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17";
-        let result = ProcDiskStats::parse_proc_diskstats_line(&diskstats_line);
-        assert_eq!(result, DiskStats { block_major: 7,
-            block_minor: 0,
-            device_name: "loop0".to_string(),
-            reads_completed_success: 1,
-            reads_merged: 2,
-            reads_sectors: 3,
-            reads_time_spent_ms: 4,
-            writes_completed_success: 5,
-            writes_merged: 6,
-            writes_sectors: 7,
-            writes_time_spent_ms: 8,
-            ios_in_progress: 9,
-            ios_time_spent_ms: 10,
-            ios_weighted_time_spent_ms: 11,
-            discards_completed_success: 12,
-            discards_merged: 13,
-            discards_sectors: 14,
-            discards_time_spent_ms: 15,
-            flush_requests_completed_success: 16,
-            flush_requests_time_spent_ms: 17
-        });
-    }
-    #[test]
-    fn parse_proc_diskstats_line_before_linux_4_18() {
-        let diskstats_line = "   7       0 loop0 1 2 3 4 5 6 7 8 9 10 11";
-        let result = ProcDiskStats::parse_proc_diskstats_line(&diskstats_line);
-        assert_eq!(result, DiskStats { block_major: 7,
-            block_minor: 0,
-            device_name: "loop0".to_string(),
-            reads_completed_success: 1,
-            reads_merged: 2,
-            reads_sectors: 3,
-            reads_time_spent_ms: 4,
-            writes_completed_success: 5,
-            writes_merged: 6,
-            writes_sectors: 7,
-            writes_time_spent_ms: 8,
-            ios_in_progress: 9,
-            ios_time_spent_ms: 10,
-            ios_weighted_time_spent_ms: 11,
-            discards_completed_success: 0,
-            discards_merged: 0,
-            discards_sectors: 0,
-            discards_time_spent_ms: 0,
-            flush_requests_completed_success: 0,
-            flush_requests_time_spent_ms: 0
-        });
-    }
-
-    #[test]
-    fn parse_full_proc_diskstats_file() {
-        let proc_diskstats = "   7       0 loop0 11 0 28 0 0 0 0 0 0 4 0 0 0 0 0 0 0
-   7       1 loop1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-   7       2 loop2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-   7       3 loop3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-   7       4 loop4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-   7       5 loop5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-   7       6 loop6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-   7       7 loop7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
- 253       0 vda 13534 4237 1645451 3763 10172 10577 1730555 12701 0 23356 18881 7179 0 89620507 396 3929 2019
- 253       1 vda1 13192 2675 1623109 3692 10151 10555 1730312 12688 0 23324 16775 7151 0 87803128 394 0 0
- 253      15 vda15 136 1547 9919 20 1 0 1 0 0 52 21 1 0 186691 0 0 0
- 259       0 vda16 159 15 10711 31 20 22 242 12 0 108 46 27 0 1630688 1 0 0
-  11       0 sr0 291 0 75108 68 0 0 0 0 0 156 68 0 0 0 0 0 0";
-        let result = ProcDiskStats::parse_proc_diskstats(proc_diskstats);
-        assert_eq!(result, ProcDiskStats {
-            disk_stats: vec![
-                DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 1, device_name: "loop1".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 2, device_name: "loop2".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 3, device_name: "loop3".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 4, device_name: "loop4".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 5, device_name: "loop5".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 6, device_name: "loop6".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 7, block_minor: 7, device_name: "loop7".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: 7179, discards_merged: 0, discards_sectors: 89620507, discards_time_spent_ms: 396, flush_requests_completed_success: 3929, flush_requests_time_spent_ms: 2019 },
-                DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: 7151, discards_merged: 0, discards_sectors: 87803128, discards_time_spent_ms: 394, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 253, block_minor: 15, device_name: "vda15".to_string(), reads_completed_success: 136, reads_merged: 1547, reads_sectors: 9919, reads_time_spent_ms: 20, writes_completed_success: 1, writes_merged: 0, writes_sectors: 1, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 52, ios_weighted_time_spent_ms: 21, discards_completed_success: 1, discards_merged: 0, discards_sectors: 186691, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 259, block_minor: 0, device_name: "vda16".to_string(), reads_completed_success: 159, reads_merged: 15, reads_sectors: 10711, reads_time_spent_ms: 31, writes_completed_success: 20, writes_merged: 22, writes_sectors: 242, writes_time_spent_ms: 12, ios_in_progress: 0, ios_time_spent_ms: 108, ios_weighted_time_spent_ms: 46, discards_completed_success: 27, discards_merged: 0, discards_sectors: 1630688, discards_time_spent_ms: 1, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 },
-                DiskStats { block_major: 11, block_minor: 0, device_name: "sr0".to_string(), reads_completed_success: 291, reads_merged: 0, reads_sectors: 75108, reads_time_spent_ms: 68, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 156, ios_weighted_time_spent_ms: 68, discards_completed_success: 0, discards_merged: 0, discards_sectors: 0, discards_time_spent_ms: 0, flush_requests_completed_success: 0, flush_requests_time_spent_ms: 0 }
-            ]
-        });
-    }
-   */
-
-    #[test]
-    fn create_sys_block_device_stat_file_and_parse() {
-        let stat_file_contents = "   13423     4331  1635716     4187    17196    13157  2515099    25033        0    48692    33644     7480        0 89783662      382     7436     4041";
-        let dev_file_contents = "253:0";
-        let max_hw_sectors_kb_file_contents = "2147483647";
-        let max_sectors_kb_file_contents = "1280";
-        let nr_requests_contents = "256";
-        let scheduler = "[none] mq-deadline";
-        let rotational = "1";
+    fn create_sys_block_device_parse_files()
+    {
         let alignment_offset = "0";
         let cache_type = "write back";
+        let dev= "253:0";
+        let discard_alignment = "0";
+        let diskseq = "9";
+        let hidden = "0";
         let inflight = "       1        2";
-        let dax = "0";
+        let queue_add_random= "0";
+        let queue_chunk_sectors = "0";
+        let queue_dax = "0";
+        let queue_discard_granularity = "512";
+        let queue_discard_max_bytes = "2147483136";
+        let queue_discard_max_hw_bytes = "2147483136";
+        let queue_hw_sector_size = "512";
+        let queue_io_poll = "0";
+        let queue_io_poll_delay = "-1";
+        let queue_logical_block_size = "512";
+        let queue_max_discard_segments = "1";
+        let queue_max_hw_sectors_kb = "2147483647";
+        let queue_max_integrity_segments = "0";
+        let queue_max_sectors_kb = "1280";
+        let queue_max_segment_size = "4294967295";
+        let queue_max_segments = "254";
+        let queue_minimum_io_size = "512";
+        let queue_nomerges = "0";
+        let queue_nr_requests = "256";
+        let queue_nr_zones = "0";
+        let queue_optimal_io_size = "0";
+        let queue_physical_block_size = "512";
+        let queue_read_ahead_kb = "128";
+        let queue_rotational = "1";
+        let queue_rq_affinity = "1";
+        let queue_scheduler = "[none] mq-deadline";
+        let queue_write_cache = "write back";
+        let queue_write_same_max_bytes = "0";
+        let queue_zoned = "none";
+        let range = "16";
+        let removable = "0";
+        let ro = "0";
+        let size = "125829120";
+        let stat = "    9718     3826  1052371     3026     2856     2331   312397     1947        0     6004     5554     7141        0 88014755      276      591      304";
 
         create_dir_all("/tmp/_sys/block/sda/queue").expect("Error creating mock sysfs directories.");
-        write("/tmp/_sys/block/sda/stat", stat_file_contents).expect("error writing to mock sysfs stat file.");
-        write("/tmp/_sys/block/sda/dev", dev_file_contents).expect("error writing to mock sysfs dev file.");
-        write("/tmp/_sys/block/sda/queue/max_hw_sectors_kb", max_hw_sectors_kb_file_contents).expect("error writing to mock sysfs queue/max_hw_sectors_kb file.");
-        write("/tmp/_sys/block/sda/queue/max_sectors_kb", max_sectors_kb_file_contents).expect("error writing to mock sysfs queue/max_sectors_kb file.");
-        write("/tmp/_sys/block/sda/queue/nr_requests", nr_requests_contents).expect("error writing to mock sysfs queue/nr_requests file.");
-        write("/tmp/_sys/block/sda/queue/scheduler", scheduler).expect("error writing to mock sysfs queue/scheduler file.");
-        write("/tmp/_sys/block/sda/queue/rotational", rotational).expect("error writing to mock sysfs queue/rotational file.");
         write("/tmp/_sys/block/sda/alignment_offset", alignment_offset).expect("error writing to mock sysfs alignment_offset file.");
         write("/tmp/_sys/block/sda/cache_type", cache_type).expect("error writing to mock sysfs cache_type file.");
+        write("/tmp/_sys/block/sda/dev", dev).expect("error writing to mock sysfs dev file.");
+        write("/tmp/_sys/block/sda/discard_alignment", discard_alignment).expect("error writing to mock sysfs discard_alginment file.");
+        write("/tmp/_sys/block/sda/diskseq", diskseq).expect("error writing to mock sysfs diskseq file.");
+        write("/tmp/_sys/block/sda/hidden", hidden).expect("error writing to mock sysfs hidden file.");
         write("/tmp/_sys/block/sda/inflight", inflight).expect("error writing to mock sysfs inflight file.");
-        write("/tmp/_sys/block/sda/queue/dax", dax).expect("error writing to mock sysfs queue/dax file.");
+        write("/tmp/_sys/block/sda/queue/add_random", queue_add_random).expect("error writing to mock sysfs queue/add_random file.");
+        write("/tmp/_sys/block/sda/queue/chunk_sectors", queue_chunk_sectors).expect("error writing to mock sysfs queue/chunk_sectors file.");
+        write("/tmp/_sys/block/sda/queue/dax", queue_dax).expect("error writing to mock sysfs queue/dax file.");
+        write("/tmp/_sys/block/sda/queue/discard_granularity", queue_discard_granularity).expect("error writing to mock sysfs queue/discard_granularity file.");
+        write("/tmp/_sys/block/sda/queue/discard_max_bytes", queue_discard_max_bytes).expect("error writing to mock sysfs queue/discard_max_bytes file.");
+        write("/tmp/_sys/block/sda/queue/discard_max_hw_bytes", queue_discard_max_hw_bytes).expect("error writing to mock sysfs queue/discard_max_hw_bytes file.");
+        write("/tmp/_sys/block/sda/queue/hw_sector_size", queue_hw_sector_size).expect("error writing to mock sysfs queue/hw_sector_size file.");
+        write("/tmp/_sys/block/sda/queue/io_poll", queue_io_poll).expect("error writing to mock sysfs queue/io_poll file.");
+        write("/tmp/_sys/block/sda/queue/io_poll_delay", queue_io_poll_delay).expect("error writing to mock sysfs queue/io_poll_delay file.");
+        write("/tmp/_sys/block/sda/queue/logical_block_size", queue_logical_block_size).expect("error writing to mock sysfs queue/logical_block_size file.");
+        write("/tmp/_sys/block/sda/queue/max_discard_segments", queue_max_discard_segments).expect("error writing to mock sysfs queue/max_discard_segments file.");
+        write("/tmp/_sys/block/sda/queue/max_hw_sectors_kb", queue_max_hw_sectors_kb).expect("error writing to mock sysfs queue/max_hw_sectors_kb file.");
+        write("/tmp/_sys/block/sda/queue/max_integrity_segments", queue_max_integrity_segments).expect("error writing to mock sysfs queue/max_integrity_segments file.");
+        write("/tmp/_sys/block/sda/queue/max_sectors_kb", queue_max_sectors_kb).expect("error writing to mock sysfs queue/max_sectors_kb file.");
+        write("/tmp/_sys/block/sda/queue/max_segment_size", queue_max_segment_size).expect("error writing to mock sysfs queue/max_segment_size file.");
+        write("/tmp/_sys/block/sda/queue/max_segments", queue_max_segments).expect("error writing to mock sysfs queue/max_segments file.");
+        write("/tmp/_sys/block/sda/queue/minimum_io_size", queue_minimum_io_size).expect("error writing to mock sysfs queue/minimum_io_size file.");
+        write("/tmp/_sys/block/sda/queue/nomerges", queue_nomerges).expect("error writing to mock sysfs queue/nomerges file.");
+        write("/tmp/_sys/block/sda/queue/nr_requests", queue_nr_requests).expect("error writing to mock sysfs queue/nr_requests file.");
+        write("/tmp/_sys/block/sda/queue/nr_zones", queue_nr_zones).expect("error writing to mock sysfs queue/nr_zones file.");
+        write("/tmp/_sys/block/sda/queue/optimal_io_size", queue_optimal_io_size).expect("error writing to mock sysfs queue/optimal_io_size file.");
+        write("/tmp/_sys/block/sda/queue/physical_block_size", queue_physical_block_size).expect("error writing to mock sysfs queue/physical_block_size file.");
+        write("/tmp/_sys/block/sda/queue/read_ahead_kb", queue_read_ahead_kb).expect("error writing to mock sysfs queue/read_ahead_kb file.");
+        write("/tmp/_sys/block/sda/queue/rotational", queue_rotational).expect("error writing to mock sysfs queue/rotational file.");
+        write("/tmp/_sys/block/sda/queue/rq_affinity", queue_rq_affinity).expect("error writing to mock sysfs queue/rq_affinity file.");
+        write("/tmp/_sys/block/sda/queue/scheduler", queue_scheduler).expect("error writing to mock sysfs queue/scheduler file.");
+        write("/tmp/_sys/block/sda/queue/write_cache", queue_write_cache).expect("error writing to mock sysfs queue/write_cache file.");
+        write("/tmp/_sys/block/sda/queue/write_same_max_bytes", queue_write_same_max_bytes).expect("error writing to mock sysfs queue/write_same_max_bytes file.");
+        write("/tmp/_sys/block/sda/queue/zoned", queue_zoned).expect("error writing to mock sysfs queue/zoned file.");
+        write("/tmp/_sys/block/sda/range", range).expect("error writing to mock sysfs range file.");
+        write("/tmp/_sys/block/sda/removable", removable).expect("error writing to mock sysfs removable file.");
+        write("/tmp/_sys/block/sda/ro", ro).expect("error writing to mock sysfs ro file.");
+        write("/tmp/_sys/block/sda/size", size).expect("error writing to mock sysfs size file.");
+        write("/tmp/_sys/block/sda/stat", stat).expect("error writing to mock sysfs stat file.");
 
         let result = Builder::new().path("/tmp/_sys/block").read();
 
         remove_dir_all("/tmp/_sys").unwrap();
 
-        println!("{:?}", result);
+        assert_eq!(result, SysBlock {
+            block_devices: vec![
+                BlockDevice {
+                    dev_block_major: 253,
+                    dev_block_minor: 0,
+                    device_name: "sda".to_string(),
+                    discard_alignment: 0,
+                    stat_reads_completed_success: 9718,
+                    stat_reads_merged: 3826,
+                    stat_reads_sectors: 1052371,
+                    stat_reads_time_spent_ms: 3026,
+                    stat_writes_completed_success: 2856,
+                    stat_writes_merged: 2331,
+                    stat_writes_sectors: 312397,
+                    stat_writes_time_spent_ms: 1947,
+                    stat_ios_in_progress: 0,
+                    stat_ios_time_spent_ms: 6004,
+                    stat_ios_weighted_time_spent_ms: 5554,
+                    stat_discards_completed_success: Some(
+                        7141,
+                    ),
+                    stat_discards_merged: Some(
+                        0,
+                    ),
+                    stat_discards_sectors: Some(
+                        88014755,
+                    ),
+                    stat_discards_time_spent_ms: Some(
+                        276,
+                    ),
+                    stat_flush_requests_completed_success: Some(
+                        591,
+                    ),
+                    stat_flush_requests_time_spent_ms: Some(
+                        304,
+                    ),
+                    alignment_offset: 0,
+                    cache_type: "write back".to_string(),
+                    diskseq: 9,
+                    hidden: 0,
+                    inflight_reads: 1,
+                    inflight_writes: 2,
+                    range: 16,
+                    removable: 0,
+                    ro: 0,
+                    size: 125829120,
+                    queue_max_hw_sectors_kb: 2147483647,
+                    queue_max_sectors_kb: 1280,
+                    queue_max_discard_segments: 1,
+                    queue_nr_requests: 256,
+                    queue_nr_zones: Some(
+                        0,
+                    ),
+                    queue_scheduler: "none".to_string(),
+                    queue_rotational: 1,
+                    queue_dax: 0,
+                    queue_add_random: 0,
+                    queue_discard_granularity: 512,
+                    queue_discard_max_hw_bytes: 2147483136,
+                    queue_discard_max_bytes: 2147483136,
+                    queue_hw_sector_size: 512,
+                    queue_io_poll: 0,
+                    queue_io_poll_delay: -1,
+                    queue_logical_block_size: 512,
+                    queue_minimum_io_size: 512,
+                    queue_max_integrity_segments: 0,
+                    queue_max_segments: 254,
+                    queue_max_segment_size: 4294967295,
+                    queue_nomerges: 0,
+                    queue_physical_block_size: 512,
+                    queue_optimal_io_size: 0,
+                    queue_read_ahead_kb: 128,
+                    queue_rq_affinity: 1,
+                    queue_write_cache: "write back".to_string(),
+                    queue_write_same_max_bytes: 0,
+                    queue_chunk_sectors: Some(
+                        0,
+                    ),
+                    queue_zoned: Some(
+                        "none".to_string(),
+                    ),
+                },
+            ],
+        }
+        );
+    }
+    #[test]
+    fn create_sys_block_device_parse_files_non_existent()
+    {
+        let alignment_offset = "0";
+        let cache_type = "write back";
+        let dev = "253:0";
+        let discard_alignment = "0";
+        let diskseq = "9";
+        let hidden = "0";
+        let inflight = "       1        2";
+        let queue_add_random = "0";
+        let queue_dax = "0";
+        let queue_discard_granularity = "512";
+        let queue_discard_max_bytes = "2147483136";
+        let queue_discard_max_hw_bytes = "2147483136";
+        let queue_hw_sector_size = "512";
+        let queue_io_poll = "0";
+        let queue_io_poll_delay = "-1";
+        let queue_logical_block_size = "512";
+        let queue_max_discard_segments = "1";
+        let queue_max_hw_sectors_kb = "2147483647";
+        let queue_max_integrity_segments = "0";
+        let queue_max_sectors_kb = "1280";
+        let queue_max_segment_size = "4294967295";
+        let queue_max_segments = "254";
+        let queue_minimum_io_size = "512";
+        let queue_nomerges = "0";
+        let queue_nr_requests = "256";
+        let queue_optimal_io_size = "0";
+        let queue_physical_block_size = "512";
+        let queue_read_ahead_kb = "128";
+        let queue_rotational = "1";
+        let queue_rq_affinity = "1";
+        let queue_scheduler = "[none] mq-deadline";
+        let queue_write_cache = "write back";
+        let queue_write_same_max_bytes = "0";
+        let range = "16";
+        let removable = "0";
+        let ro = "0";
+        let size = "125829120";
+        let stat = "    9718     3826  1052371     3026     2856     2331   312397     1947        0     6004     5554";
+
+        create_dir_all("/tmp/_sys/block/sda/queue").expect("Error creating mock sysfs directories.");
+        write("/tmp/_sys/block/sda/alignment_offset", alignment_offset).expect("error writing to mock sysfs alignment_offset file.");
+        write("/tmp/_sys/block/sda/cache_type", cache_type).expect("error writing to mock sysfs cache_type file.");
+        write("/tmp/_sys/block/sda/dev", dev).expect("error writing to mock sysfs dev file.");
+        write("/tmp/_sys/block/sda/discard_alignment", discard_alignment).expect("error writing to mock sysfs discard_alginment file.");
+        write("/tmp/_sys/block/sda/diskseq", diskseq).expect("error writing to mock sysfs diskseq file.");
+        write("/tmp/_sys/block/sda/hidden", hidden).expect("error writing to mock sysfs hidden file.");
+        write("/tmp/_sys/block/sda/inflight", inflight).expect("error writing to mock sysfs inflight file.");
+        write("/tmp/_sys/block/sda/queue/add_random", queue_add_random).expect("error writing to mock sysfs queue/add_random file.");
+        write("/tmp/_sys/block/sda/queue/dax", queue_dax).expect("error writing to mock sysfs queue/dax file.");
+        write("/tmp/_sys/block/sda/queue/discard_granularity", queue_discard_granularity).expect("error writing to mock sysfs queue/discard_granularity file.");
+        write("/tmp/_sys/block/sda/queue/discard_max_bytes", queue_discard_max_bytes).expect("error writing to mock sysfs queue/discard_max_bytes file.");
+        write("/tmp/_sys/block/sda/queue/discard_max_hw_bytes", queue_discard_max_hw_bytes).expect("error writing to mock sysfs queue/discard_max_hw_bytes file.");
+        write("/tmp/_sys/block/sda/queue/hw_sector_size", queue_hw_sector_size).expect("error writing to mock sysfs queue/hw_sector_size file.");
+        write("/tmp/_sys/block/sda/queue/io_poll", queue_io_poll).expect("error writing to mock sysfs queue/io_poll file.");
+        write("/tmp/_sys/block/sda/queue/io_poll_delay", queue_io_poll_delay).expect("error writing to mock sysfs queue/io_poll_delay file.");
+        write("/tmp/_sys/block/sda/queue/logical_block_size", queue_logical_block_size).expect("error writing to mock sysfs queue/logical_block_size file.");
+        write("/tmp/_sys/block/sda/queue/max_discard_segments", queue_max_discard_segments).expect("error writing to mock sysfs queue/max_discard_segments file.");
+        write("/tmp/_sys/block/sda/queue/max_hw_sectors_kb", queue_max_hw_sectors_kb).expect("error writing to mock sysfs queue/max_hw_sectors_kb file.");
+        write("/tmp/_sys/block/sda/queue/max_integrity_segments", queue_max_integrity_segments).expect("error writing to mock sysfs queue/max_integrity_segments file.");
+        write("/tmp/_sys/block/sda/queue/max_sectors_kb", queue_max_sectors_kb).expect("error writing to mock sysfs queue/max_sectors_kb file.");
+        write("/tmp/_sys/block/sda/queue/max_segment_size", queue_max_segment_size).expect("error writing to mock sysfs queue/max_segment_size file.");
+        write("/tmp/_sys/block/sda/queue/max_segments", queue_max_segments).expect("error writing to mock sysfs queue/max_segments file.");
+        write("/tmp/_sys/block/sda/queue/minimum_io_size", queue_minimum_io_size).expect("error writing to mock sysfs queue/minimum_io_size file.");
+        write("/tmp/_sys/block/sda/queue/nomerges", queue_nomerges).expect("error writing to mock sysfs queue/nomerges file.");
+        write("/tmp/_sys/block/sda/queue/nr_requests", queue_nr_requests).expect("error writing to mock sysfs queue/nr_requests file.");
+        write("/tmp/_sys/block/sda/queue/optimal_io_size", queue_optimal_io_size).expect("error writing to mock sysfs queue/optimal_io_size file.");
+        write("/tmp/_sys/block/sda/queue/physical_block_size", queue_physical_block_size).expect("error writing to mock sysfs queue/physical_block_size file.");
+        write("/tmp/_sys/block/sda/queue/read_ahead_kb", queue_read_ahead_kb).expect("error writing to mock sysfs queue/read_ahead_kb file.");
+        write("/tmp/_sys/block/sda/queue/rotational", queue_rotational).expect("error writing to mock sysfs queue/rotational file.");
+        write("/tmp/_sys/block/sda/queue/rq_affinity", queue_rq_affinity).expect("error writing to mock sysfs queue/rq_affinity file.");
+        write("/tmp/_sys/block/sda/queue/scheduler", queue_scheduler).expect("error writing to mock sysfs queue/scheduler file.");
+        write("/tmp/_sys/block/sda/queue/write_cache", queue_write_cache).expect("error writing to mock sysfs queue/write_cache file.");
+        write("/tmp/_sys/block/sda/queue/write_same_max_bytes", queue_write_same_max_bytes).expect("error writing to mock sysfs queue/write_same_max_bytes file.");
+        write("/tmp/_sys/block/sda/range", range).expect("error writing to mock sysfs range file.");
+        write("/tmp/_sys/block/sda/removable", removable).expect("error writing to mock sysfs removable file.");
+        write("/tmp/_sys/block/sda/ro", ro).expect("error writing to mock sysfs ro file.");
+        write("/tmp/_sys/block/sda/size", size).expect("error writing to mock sysfs size file.");
+        write("/tmp/_sys/block/sda/stat", stat).expect("error writing to mock sysfs stat file.");
+
+        let result = Builder::new().path("/tmp/_sys/block").read();
+
+        remove_dir_all("/tmp/_sys").unwrap();
+
+        assert_eq!(result,
+                   SysBlock {
+                       block_devices: vec![
+                           BlockDevice {
+                               dev_block_major: 253,
+                               dev_block_minor: 0,
+                               device_name: "sda".to_string(),
+                               discard_alignment: 0,
+                               stat_reads_completed_success: 9718,
+                               stat_reads_merged: 3826,
+                               stat_reads_sectors: 1052371,
+                               stat_reads_time_spent_ms: 3026,
+                               stat_writes_completed_success: 2856,
+                               stat_writes_merged: 2331,
+                               stat_writes_sectors: 312397,
+                               stat_writes_time_spent_ms: 1947,
+                               stat_ios_in_progress: 0,
+                               stat_ios_time_spent_ms: 6004,
+                               stat_ios_weighted_time_spent_ms: 5554,
+                               stat_discards_completed_success: None,
+                               stat_discards_merged: None,
+                               stat_discards_sectors: None,
+                               stat_discards_time_spent_ms: None,
+                               stat_flush_requests_completed_success: None,
+                               stat_flush_requests_time_spent_ms: None,
+                               alignment_offset: 0,
+                               cache_type: "write back".to_string(),
+                               diskseq: 9,
+                               hidden: 0,
+                               inflight_reads: 1,
+                               inflight_writes: 2,
+                               range: 16,
+                               removable: 0,
+                               ro: 0,
+                               size: 125829120,
+                               queue_max_hw_sectors_kb: 2147483647,
+                               queue_max_sectors_kb: 1280,
+                               queue_max_discard_segments: 1,
+                               queue_nr_requests: 256,
+                               queue_nr_zones: None,
+                               queue_scheduler: "none".to_string(),
+                               queue_rotational: 1,
+                               queue_dax: 0,
+                               queue_add_random: 0,
+                               queue_discard_granularity: 512,
+                               queue_discard_max_hw_bytes: 2147483136,
+                               queue_discard_max_bytes: 2147483136,
+                               queue_hw_sector_size: 512,
+                               queue_io_poll: 0,
+                               queue_io_poll_delay: -1,
+                               queue_logical_block_size: 512,
+                               queue_minimum_io_size: 512,
+                               queue_max_integrity_segments: 0,
+                               queue_max_segments: 254,
+                               queue_max_segment_size: 4294967295,
+                               queue_nomerges: 0,
+                               queue_physical_block_size: 512,
+                               queue_optimal_io_size: 0,
+                               queue_read_ahead_kb: 128,
+                               queue_rq_affinity: 1,
+                               queue_write_cache: "write back".to_string(),
+                               queue_write_same_max_bytes: 0,
+                               queue_chunk_sectors: None,
+                               queue_zoned: None,
+                           },
+                       ],
+                   }
+        );
     }
 }
