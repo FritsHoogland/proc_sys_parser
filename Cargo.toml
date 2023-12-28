@@ -1,6 +1,6 @@
 [package]
 name = "proc_sys_parser"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 license = "Apache-2.0"
 keywords = ["linux", "proc", "parser"]
@@ -11,6 +11,6 @@ readme = "README.md"
 description = "This crate provides routines for parsing linux /proc files into Rust structs. There are multiple other crates doing this, but these either do not choose to process the statistics in way to make them directly usable, or generalize the statistics and loose the detail."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 nix = { version = "0.27.1", features = [ "feature" ] }
+rand = "0.8.5"

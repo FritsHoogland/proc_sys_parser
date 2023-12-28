@@ -333,7 +333,9 @@ impl ProcMemInfo {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{write, remove_file};
+    use std::fs::{write, remove_dir_all, create_dir_all};
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
     use super::*;
 
     #[test]
@@ -514,9 +516,15 @@ HugePages_Rsvd:        0
 HugePages_Surp:        0
 Hugepagesize:       2048 kB
 Hugetlb:               0 kB";
-        write("/tmp/_test_proc_meminfo", proc_meminfo).expect("Error writing to /tmp/_test_proc_meminfo");
-        let result = Builder::new().file_name("/tmp/_test_proc_meminfo").read();
-        remove_file("/tmp/_test_proc_meminfo").unwrap();
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        create_dir_all(format!("{}", test_path)).expect("Error creating mock directory.");
+
+        write(format!("{}/meminfo", test_path), proc_meminfo).expect(format!("Error writing to {}/meminfo", test_path).as_str());
+        let result = Builder::new().file_name(format!("{}/meminfo", test_path).as_str()).read();
+
+        remove_dir_all(test_path).unwrap();
+
         assert_eq!(result, ProcMemInfo {
             memtotal: 3997876,
             memfree: 2415136,

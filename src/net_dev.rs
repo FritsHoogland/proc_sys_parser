@@ -164,7 +164,9 @@ impl ProcNetDev {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{write, remove_file};
+    use std::fs::{write, remove_dir_all, create_dir_all};
+    use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
     use super::*;
 
     #[test]
@@ -201,9 +203,16 @@ mod tests {
  face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
   eth0: 151013652   16736    0    0    0     0          0         0   816228   12257    0    0    0     0       0          0";
-        write("/tmp/_test_proc_net_dev", proc_netdev).expect("Error writing to /tmp/_test_proc_net_dev");
-        let result = Builder::new().file_name("/tmp/_test_proc_net_dev").read();
-        remove_file("/tmp/_test_proc_net_dev").unwrap();
+
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        create_dir_all(format!("{}", test_path)).expect("Error creating mock directory.");
+
+        write(format!("{}/net_dev", test_path), proc_netdev).expect(format!("Error writing to {}/net_dev", test_path).as_str());
+        let result = Builder::new().file_name(format!("{}/net_dev", test_path).as_str()).read();
+
+        remove_dir_all(test_path).unwrap();
+
         assert_eq!(result, ProcNetDev { interface:
         vec![InterfaceStats { name: "lo".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
              InterfaceStats { name: "eth0".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }

@@ -214,7 +214,9 @@ impl ProcDiskStats {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{write, remove_file};
+    use std::fs::{write, create_dir_all, remove_dir_all};
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
     use super::*;
 
     #[test]
@@ -320,9 +322,14 @@ mod tests {
  253      15 vda15 136 1547 9919 20 1 0 1 0 0 52 21 1 0 186691 0 0 0
  259       0 vda16 159 15 10711 31 20 22 242 12 0 108 46 27 0 1630688 1 0 0
   11       0 sr0 291 0 75108 68 0 0 0 0 0 156 68 0 0 0 0 0 0";
-        write("/tmp/test1/_test_proc_diskstats", proc_diskstats).expect("Error writing to /tmp/_test_proc_diskstats");
-        let result = Builder::new().file_name("/tmp/test1/_test_proc_diskstats").read();
-        remove_file("/tmp/test1/_test_proc_diskstats").unwrap();
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+
+        create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
+        write(format!("{}/diskstats", test_path), proc_diskstats).expect(format!("Error writing to {}/diskstats", test_path).as_str());
+        let result = Builder::new().file_name(format!("{}/diskstats", test_path).as_str()).read();
+        remove_dir_all(test_path).unwrap();
+
         assert_eq!(result, ProcDiskStats { disk_stats: vec![
             DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
             DiskStats { block_major: 7, block_minor: 1, device_name: "loop1".to_string(), reads_completed_success: 0, reads_merged: 0, reads_sectors: 0, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 0, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
@@ -345,9 +352,14 @@ mod tests {
  253       1 vda1 13192 2675 1623109 3692 10151 10555 1730312 12688 0 23324 16775
  253      15 vda15 136 1547 9919 20 1 0 1 0 0 52 21
  259       0 vda16 159 15 10711 31 20 22 242 12 0 108 46";
-        write("/tmp/test2/_test_proc_diskstats", proc_diskstats).expect("Error writing to /tmp/_test_proc_diskstats");
-        let result = Builder::new().file_name("/tmp/test2/_test_proc_diskstats").read();
-        remove_file("/tmp/test2/_test_proc_diskstats").unwrap();
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+
+        create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
+        write(format!("{}/diskstats", test_path), proc_diskstats).expect(format!("Error writing to {}/diskstats", test_path).as_str());
+        let result = Builder::new().file_name(format!("{}/diskstats", test_path).as_str()).read();
+        remove_dir_all(test_path).unwrap();
+
         assert_eq!(result, ProcDiskStats { disk_stats: vec![
             DiskStats { block_major: 253, block_minor: 0, device_name: "vda".to_string(), reads_completed_success: 13534, reads_merged: 4237, reads_sectors: 1645451, reads_time_spent_ms: 3763, writes_completed_success: 10172, writes_merged: 10577, writes_sectors: 1730555, writes_time_spent_ms: 12701, ios_in_progress: 0, ios_time_spent_ms: 23356, ios_weighted_time_spent_ms: 18881, discards_completed_success: None, discards_merged: None, discards_sectors: None, discards_time_spent_ms: None, flush_requests_completed_success: None, flush_requests_time_spent_ms: None },
             DiskStats { block_major: 253, block_minor: 1, device_name: "vda1".to_string(), reads_completed_success: 13192, reads_merged: 2675, reads_sectors: 1623109, reads_time_spent_ms: 3692, writes_completed_success: 10151, writes_merged: 10555, writes_sectors: 1730312, writes_time_spent_ms: 12688, ios_in_progress: 0, ios_time_spent_ms: 23324, ios_weighted_time_spent_ms: 16775, discards_completed_success: None, discards_merged: None, discards_sectors: None, discards_time_spent_ms: None, flush_requests_completed_success: None, flush_requests_time_spent_ms: None },
