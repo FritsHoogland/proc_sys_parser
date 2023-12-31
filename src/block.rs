@@ -418,7 +418,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let alignment_offset = read_to_string(blockdevice_dir.path().join("alignment_offset")).unwrap_or_else(|error| panic!("Error {} reading block device alignment_offset sysfs entry", error)).trim_end_matches("\n").to_string();
+        let alignment_offset = read_to_string(blockdevice_dir.path().join("alignment_offset")).unwrap_or_else(|error| panic!("Error {} reading block device alignment_offset sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.alignment_offset = alignment_offset.parse::<u64>().unwrap();
     }
     fn parse_cache_type(
@@ -426,7 +426,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let cache_type = read_to_string(blockdevice_dir.path().join("cache_type")).unwrap_or("n/a".to_string()).trim_end_matches("\n").to_string();
+        let cache_type = read_to_string(blockdevice_dir.path().join("cache_type")).unwrap_or("n/a".to_string()).trim_end_matches('\n').to_string();
         blockdevice_data.cache_type = cache_type;
     }
     fn parse_dev(
@@ -434,7 +434,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let dev_contents = read_to_string(blockdevice_dir.path().join("dev")).unwrap_or_else(|error| panic!("Error {} reading block device dev sysfs entry", error)).trim_end_matches("\n").to_string();
+        let dev_contents = read_to_string(blockdevice_dir.path().join("dev")).unwrap_or_else(|error| panic!("Error {} reading block device dev sysfs entry", error)).trim_end_matches('\n').to_string();
         let mut fields = dev_contents.split(':');
         blockdevice_data.dev_block_major = fields.next().unwrap().parse::<u64>().unwrap();
         blockdevice_data.dev_block_minor = fields.next().unwrap().parse::<u64>().unwrap();
@@ -444,7 +444,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let discard_alignment = read_to_string(blockdevice_dir.path().join("discard_alignment")).unwrap_or_else(|error| panic!("Error {} reading block device discard_alignment sysfs entry", error)).trim_end_matches("\n").to_string();
+        let discard_alignment = read_to_string(blockdevice_dir.path().join("discard_alignment")).unwrap_or_else(|error| panic!("Error {} reading block device discard_alignment sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.discard_alignment = discard_alignment.parse::<u64>().unwrap();
     }
     fn parse_diskseq(
@@ -452,7 +452,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let diskseq = read_to_string(blockdevice_dir.path().join("diskseq")).unwrap_or_else(|error| panic!("Error {} reading block device diskseq sysfs entry", error)).trim_end_matches("\n").to_string();
+        let diskseq = read_to_string(blockdevice_dir.path().join("diskseq")).unwrap_or_else(|error| panic!("Error {} reading block device diskseq sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.diskseq = diskseq.parse::<u64>().unwrap();
     }
     fn parse_hidden(
@@ -460,7 +460,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let hidden = read_to_string(blockdevice_dir.path().join("hidden")).unwrap_or_else(|error| panic!("Error {} reading block device hidden sysfs entry", error)).trim_end_matches("\n").to_string();
+        let hidden = read_to_string(blockdevice_dir.path().join("hidden")).unwrap_or_else(|error| panic!("Error {} reading block device hidden sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.hidden = hidden.parse::<u64>().unwrap();
     }
     fn parse_inflight(
@@ -468,7 +468,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let inflight_from_file = read_to_string(blockdevice_dir.path().join("inflight")).unwrap_or_else(|error| panic!("Error {} reading block device inflight sysfs entry", error)).trim_end_matches("\n").to_string();
+        let inflight_from_file = read_to_string(blockdevice_dir.path().join("inflight")).unwrap_or_else(|error| panic!("Error {} reading block device inflight sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.inflight_reads = inflight_from_file.split_whitespace().nth(0).unwrap().parse::<u64>().unwrap();
         blockdevice_data.inflight_writes = inflight_from_file.split_whitespace().nth(1).unwrap().parse::<u64>().unwrap();
     }
@@ -477,7 +477,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let add_random = read_to_string(blockdevice_dir.path().join("queue").join("add_random")).unwrap_or_else(|error| panic!("Error {} reading block device queue/add_random sysfs entry", error)).trim_end_matches("\n").to_string();
+        let add_random = read_to_string(blockdevice_dir.path().join("queue").join("add_random")).unwrap_or_else(|error| panic!("Error {} reading block device queue/add_random sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_add_random = add_random.parse::<u64>().unwrap();
     }
     pub fn parse_queue_chunk_sectors(
@@ -493,7 +493,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let dax = read_to_string(blockdevice_dir.path().join("queue").join("dax")).unwrap_or_else(|error| panic!("Error {} reading block device queue/dax sysfs entry", error)).trim_end_matches("\n").to_string();
+        let dax = read_to_string(blockdevice_dir.path().join("queue").join("dax")).unwrap_or_else(|error| panic!("Error {} reading block device queue/dax sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_dax = dax.parse::<u64>().unwrap();
     }
     fn parse_queue_discard_granularity(
@@ -501,7 +501,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let discard_granularity = read_to_string(blockdevice_dir.path().join("queue").join("discard_granularity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_granularity sysfs entry", error)).trim_end_matches("\n").to_string();
+        let discard_granularity = read_to_string(blockdevice_dir.path().join("queue").join("discard_granularity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_granularity sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_discard_granularity = discard_granularity.parse::<u64>().unwrap();
     }
     fn parse_queue_discard_max_bytes(
@@ -509,7 +509,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let discard_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_bytes sysfs entry", error)).trim_end_matches("\n").to_string();
+        let discard_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_bytes sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_discard_max_bytes = discard_max_bytes.parse::<u64>().unwrap();
     }
     fn parse_queue_discard_max_hw_bytes(
@@ -517,7 +517,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let discard_max_hw_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_hw_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_hw_bytes sysfs entry", error)).trim_end_matches("\n").to_string();
+        let discard_max_hw_bytes = read_to_string(blockdevice_dir.path().join("queue").join("discard_max_hw_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/discard_max_hw_bytes sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_discard_max_hw_bytes = discard_max_hw_bytes.parse::<u64>().unwrap();
     }
     fn parse_queue_hw_sector_size(
@@ -525,7 +525,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let hw_sector_rize = read_to_string(blockdevice_dir.path().join("queue").join("hw_sector_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/hw_sector_size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let hw_sector_rize = read_to_string(blockdevice_dir.path().join("queue").join("hw_sector_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/hw_sector_size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_hw_sector_size = hw_sector_rize.parse::<u64>().unwrap();
     }
     fn parse_queue_io_poll(
@@ -533,7 +533,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let io_poll = read_to_string(blockdevice_dir.path().join("queue").join("io_poll")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll sysfs entry", error)).trim_end_matches("\n").to_string();
+        let io_poll = read_to_string(blockdevice_dir.path().join("queue").join("io_poll")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_io_poll = io_poll.parse::<u64>().unwrap();
     }
     fn parse_queue_io_poll_delay(
@@ -541,7 +541,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let io_poll_delay = read_to_string(blockdevice_dir.path().join("queue").join("io_poll_delay")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll_delay sysfs entry", error)).trim_end_matches("\n").to_string();
+        let io_poll_delay = read_to_string(blockdevice_dir.path().join("queue").join("io_poll_delay")).unwrap_or_else(|error| panic!("Error {} reading block device queue/io_poll_delay sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_io_poll_delay = io_poll_delay.parse::<i64>().unwrap();
     }
     fn parse_queue_logical_block_size(
@@ -549,7 +549,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let logical_block_size = read_to_string(blockdevice_dir.path().join("queue").join("logical_block_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/logical_block_size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let logical_block_size = read_to_string(blockdevice_dir.path().join("queue").join("logical_block_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/logical_block_size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_logical_block_size = logical_block_size.parse::<u64>().unwrap();
     }
     fn parse_queue_max_discard_segments(
@@ -557,7 +557,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let max_discard_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_discard_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_discard_segments sysfs entry", error)).trim_end_matches("\n").to_string();
+        let max_discard_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_discard_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_discard_segments sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_max_discard_segments = max_discard_segments.parse::<u64>().unwrap();
     }
     fn parse_queue_max_hw_sectors_kb(
@@ -565,7 +565,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let max_hw_sectors_kb_contents = read_to_string(blockdevice_dir.path().join("queue").join("max_hw_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_hw_sectors_kb sysfs entry", error)).trim_end_matches("\n").to_string();
+        let max_hw_sectors_kb_contents = read_to_string(blockdevice_dir.path().join("queue").join("max_hw_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_hw_sectors_kb sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_max_hw_sectors_kb = max_hw_sectors_kb_contents.parse::<u64>().unwrap();
     }
     fn parse_queue_max_integrity_segments(
@@ -573,7 +573,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let max_integrity_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_integrity_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_integrity_segments sysfs entry", error)).trim_end_matches("\n").to_string();
+        let max_integrity_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_integrity_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_integrity_segments sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_max_integrity_segments = max_integrity_segments.parse::<u64>().unwrap();
     }
     fn parse_queue_max_sectors_kb(
@@ -581,7 +581,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let max_sectors_kb = read_to_string(blockdevice_dir.path().join("queue").join("max_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_sectors_kb sysfs entry", error)).trim_end_matches("\n").to_string();
+        let max_sectors_kb = read_to_string(blockdevice_dir.path().join("queue").join("max_sectors_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_sectors_kb sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_max_sectors_kb = max_sectors_kb.parse::<u64>().unwrap();
     }
     fn parse_queue_max_segment_size(
@@ -589,7 +589,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let max_segment_size = read_to_string(blockdevice_dir.path().join("queue").join("max_segment_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_segment_size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let max_segment_size = read_to_string(blockdevice_dir.path().join("queue").join("max_segment_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_segment_size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_max_segment_size = max_segment_size.parse::<u64>().unwrap();
     }
     fn parse_queue_max_segments(
@@ -597,7 +597,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let max_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_segments sysfs entry", error)).trim_end_matches("\n").to_string();
+        let max_segments = read_to_string(blockdevice_dir.path().join("queue").join("max_segments")).unwrap_or_else(|error| panic!("Error {} reading block device queue/max_segments sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_max_segments = max_segments.parse::<u64>().unwrap();
     }
     fn parse_queue_minimum_io_size(
@@ -605,7 +605,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let minimum_io_size = read_to_string(blockdevice_dir.path().join("queue").join("minimum_io_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/minimum_io_size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let minimum_io_size = read_to_string(blockdevice_dir.path().join("queue").join("minimum_io_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/minimum_io_size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_minimum_io_size = minimum_io_size.parse::<u64>().unwrap();
     }
     fn parse_queue_nomerges(
@@ -613,7 +613,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let nomerges = read_to_string(blockdevice_dir.path().join("queue").join("nomerges")).unwrap_or_else(|error| panic!("Error {} reading block device queue/nomerges sysfs entry", error)).trim_end_matches("\n").to_string();
+        let nomerges = read_to_string(blockdevice_dir.path().join("queue").join("nomerges")).unwrap_or_else(|error| panic!("Error {} reading block device queue/nomerges sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_nomerges = nomerges.parse::<u64>().unwrap();
     }
     fn parse_queue_nr_requests(
@@ -621,7 +621,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("nr_requests")).unwrap_or_else(|error| panic!("Error {} reading block device queue/nr_requests sysfs entry", error)).trim_end_matches("\n").to_string();
+        let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("nr_requests")).unwrap_or_else(|error| panic!("Error {} reading block device queue/nr_requests sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_nr_requests = nr_requests.parse::<u64>().unwrap();
     }
     pub fn parse_queue_nr_zones(
@@ -637,7 +637,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let optimal_io_size = read_to_string(blockdevice_dir.path().join("queue").join("optimal_io_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/optimal_io_size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let optimal_io_size = read_to_string(blockdevice_dir.path().join("queue").join("optimal_io_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/optimal_io_size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_optimal_io_size = optimal_io_size.parse::<u64>().unwrap();
     }
     fn parse_queue_physical_block_size(
@@ -645,7 +645,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let physical_block_size = read_to_string(blockdevice_dir.path().join("queue").join("physical_block_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/physical_block_size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let physical_block_size = read_to_string(blockdevice_dir.path().join("queue").join("physical_block_size")).unwrap_or_else(|error| panic!("Error {} reading block device queue/physical_block_size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_physical_block_size = physical_block_size.parse::<u64>().unwrap();
     }
     fn parse_queue_read_ahead_kb(
@@ -653,7 +653,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let read_ahead_kb = read_to_string(blockdevice_dir.path().join("queue").join("read_ahead_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/read_ahead_kb sysfs entry", error)).trim_end_matches("\n").to_string();
+        let read_ahead_kb = read_to_string(blockdevice_dir.path().join("queue").join("read_ahead_kb")).unwrap_or_else(|error| panic!("Error {} reading block device queue/read_ahead_kb sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_read_ahead_kb = read_ahead_kb.parse::<u64>().unwrap();
     }
     fn parse_queue_rotational(
@@ -661,7 +661,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let rotational = read_to_string(blockdevice_dir.path().join("queue").join("rotational")).unwrap_or_else(|error| panic!("Error {} reading block device queue/rotational sysfs entry", error)).trim_end_matches("\n").to_string();
+        let rotational = read_to_string(blockdevice_dir.path().join("queue").join("rotational")).unwrap_or_else(|error| panic!("Error {} reading block device queue/rotational sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_rotational = rotational.parse::<u64>().unwrap();
     }
     fn parse_queue_rq_affinity(
@@ -669,7 +669,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let rq_affinity = read_to_string(blockdevice_dir.path().join("queue").join("rq_affinity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/rq_affinity sysfs entry", error)).trim_end_matches("\n").to_string();
+        let rq_affinity = read_to_string(blockdevice_dir.path().join("queue").join("rq_affinity")).unwrap_or_else(|error| panic!("Error {} reading block device queue/rq_affinity sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_rq_affinity = rq_affinity.parse::<u64>().unwrap();
     }
     fn parse_queue_scheduler(
@@ -677,7 +677,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("scheduler")).unwrap_or_else(|error| panic!("Error {} reading block device queue/scheduler sysfs entry", error)).trim_end_matches("\n").to_string();
+        let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("scheduler")).unwrap_or_else(|error| panic!("Error {} reading block device queue/scheduler sysfs entry", error)).trim_end_matches('\n').to_string();
         let left_bracket = nr_requests.find('[');
         let right_bracket = nr_requests.find(']');
         if left_bracket.is_some() && right_bracket.is_some()
@@ -695,7 +695,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let write_cache = read_to_string(blockdevice_dir.path().join("queue").join("write_cache")).unwrap_or_else(|error| panic!("Error {} reading block device queue/write_cache sysfs entry", error)).trim_end_matches("\n").to_string();
+        let write_cache = read_to_string(blockdevice_dir.path().join("queue").join("write_cache")).unwrap_or_else(|error| panic!("Error {} reading block device queue/write_cache sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_write_cache = write_cache;
     }
     pub fn parse_queue_write_same_max_bytes(
@@ -703,7 +703,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let write_same_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("write_same_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/write_same_max_bytes sysfs entry", error)).trim_end_matches("\n").to_string();
+        let write_same_max_bytes = read_to_string(blockdevice_dir.path().join("queue").join("write_same_max_bytes")).unwrap_or_else(|error| panic!("Error {} reading block device queue/write_same_max_bytes sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.queue_write_same_max_bytes = write_same_max_bytes.parse::<u64>().unwrap();
     }
     fn parse_queue_zoned(
@@ -715,7 +715,7 @@ impl SysBlock {
         blockdevice_data.queue_zoned = match zoned
         {
             Err(_) => None,
-            Ok(value) => Some(value.trim_end_matches("\n").to_string()),
+            Ok(value) => Some(value.trim_end_matches('\n').to_string()),
         };
     }
     fn parse_range(
@@ -723,7 +723,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let range = read_to_string(blockdevice_dir.path().join("range")).unwrap_or_else(|error| panic!("Error {} reading block device range sysfs entry", error)).trim_end_matches("\n").to_string();
+        let range = read_to_string(blockdevice_dir.path().join("range")).unwrap_or_else(|error| panic!("Error {} reading block device range sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.range = range.parse::<u64>().unwrap();
     }
     fn parse_removable(
@@ -731,7 +731,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let removable = read_to_string(blockdevice_dir.path().join("removable")).unwrap_or_else(|error| panic!("Error {} reading block device removable sysfs entry", error)).trim_end_matches("\n").to_string();
+        let removable = read_to_string(blockdevice_dir.path().join("removable")).unwrap_or_else(|error| panic!("Error {} reading block device removable sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.removable = removable.parse::<u64>().unwrap();
     }
     fn parse_ro(
@@ -739,7 +739,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let ro = read_to_string(blockdevice_dir.path().join("ro")).unwrap_or_else(|error| panic!("Error {} reading block device ro sysfs entry", error)).trim_end_matches("\n").to_string();
+        let ro = read_to_string(blockdevice_dir.path().join("ro")).unwrap_or_else(|error| panic!("Error {} reading block device ro sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.ro = ro.parse::<u64>().unwrap();
     }
     fn parse_size(
@@ -747,7 +747,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let size = read_to_string(blockdevice_dir.path().join("size")).unwrap_or_else(|error| panic!("Error {} reading block device size sysfs entry", error)).trim_end_matches("\n").to_string();
+        let size = read_to_string(blockdevice_dir.path().join("size")).unwrap_or_else(|error| panic!("Error {} reading block device size sysfs entry", error)).trim_end_matches('\n').to_string();
         blockdevice_data.size = size.parse::<u64>().unwrap();
     }
     fn parse_stat(
@@ -755,7 +755,7 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let stat_contents = read_to_string(blockdevice_dir.path().join("stat")).unwrap_or_else(|error| panic!("Error {} reading block device stat sysfs entry", error)).trim_end_matches("\n").to_string();
+        let stat_contents = read_to_string(blockdevice_dir.path().join("stat")).unwrap_or_else(|error| panic!("Error {} reading block device stat sysfs entry", error)).trim_end_matches('\n').to_string();
         let mut fields = stat_contents.split_whitespace();
         blockdevice_data.stat_reads_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
         blockdevice_data.stat_reads_merged = fields.next().unwrap().parse::<u64>().unwrap();
@@ -795,7 +795,7 @@ impl SysBlock {
         {
             Err(_) => None,
             Ok(value) => {
-                match value.trim_end_matches("\n").parse::<u64>()
+                match value.trim_end_matches('\n').parse::<u64>()
                 {
                     Err(_) => None,
                     Ok(number) => Some(number),

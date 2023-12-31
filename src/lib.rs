@@ -333,4 +333,5 @@ pub mod meminfo;
 pub mod diskstats;
 pub mod net_dev;
 pub mod block;
+pub mod loadavg;
 
