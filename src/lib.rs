@@ -334,4 +334,5 @@ pub mod diskstats;
 pub mod net_dev;
 pub mod block;
 pub mod loadavg;
+pub mod pressure;
 
