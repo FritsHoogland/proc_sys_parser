@@ -60,6 +60,9 @@ use proc_sys_parser::{pressure, pressure::Builder};
 let proc_pressure = Builder::new().path("/myproc/pressure").read();
 ```
 
+If the `/proc/pressure` entry is not available because it didn't exist in that linux version, or because it's not enabled
+The ProcPressure.psi entry is set to None.
+
 */
 use std::fs::read_to_string;
 
@@ -67,6 +70,7 @@ use std::fs::read_to_string;
 /// Struct for holding `/proc/pressure` statistics
 #[derive(Debug, PartialEq)]
 pub struct ProcPressure {
+    /// psi is None if no /proc/pressure is found.
     pub psi: Option<Psi>,
 }
 ///
@@ -194,69 +198,81 @@ impl ProcPressure {
 
         let mut psi = Psi::new();
 
-        ProcPressure::parse_pressure_entity("cpu", proc_pressure_path, &mut psi);
-        ProcPressure::parse_pressure_entity("io", proc_pressure_path, &mut psi);
-        ProcPressure::parse_pressure_entity("memory", proc_pressure_path, &mut psi);
+        for psi_target in ["cpu", "io", "memory"]
+        {
+            if ProcPressure::parse_pressure_entity(psi_target, proc_pressure_path, &mut psi).is_none()
+            {
+                return proc_pressure;
+            }
+        }
         proc_pressure.psi = Some(psi);
 
         proc_pressure
     }
-    fn parse_pressure_entity(file: &str, proc_pressure_path: &str, psi: &mut Psi)
+    fn parse_pressure_entity(file: &str, proc_pressure_path: &str, psi: &mut Psi) -> Option<usize>
     {
-        let psi_contents = read_to_string(format!("{}/{}", &proc_pressure_path, file)).unwrap_or_else(|error| panic!("Error {} reading {}/{}", error, &proc_pressure_path, &file));
-        for line in psi_contents.lines()
+        match read_to_string(format!("{}/{}", &proc_pressure_path, file))
         {
-            match line.split_whitespace().next()
-            {
-                Some("some") => {
-                    match file {
-                        "cpu" => {
-                            psi.cpu_some_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.cpu_some_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.cpu_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.cpu_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+            Ok(psi_contents)  => {
+                for line in psi_contents.lines()
+                {
+                    match line.split_whitespace().next()
+                    {
+                        Some("some") => {
+                            match file {
+                                "cpu" => {
+                                    psi.cpu_some_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.cpu_some_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.cpu_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.cpu_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+                                },
+                                "io" => {
+                                    psi.io_some_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.io_some_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.io_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.io_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+                                },
+                                "memory" => {
+                                    psi.memory_some_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.memory_some_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.memory_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.memory_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+                                },
+                                &_ => panic!("Unknown entry in some: {}", file),
+                            }
                         },
-                        "io" => {
-                            psi.io_some_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.io_some_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.io_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.io_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+                        Some("full") => {
+                            match file {
+                                "cpu" => {
+                                    psi.cpu_full_avg10 = Some(line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap());
+                                    psi.cpu_full_avg60 = Some(line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap());
+                                    psi.cpu_full_avg300 = Some(line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap());
+                                    psi.cpu_full_total = Some(line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap());
+                                },
+                                "io" => {
+                                    psi.io_full_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.io_full_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.io_full_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.io_full_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+                                },
+                                "memory" => {
+                                    psi.memory_full_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.memory_full_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.memory_full_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
+                                    psi.memory_full_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
+                                },
+                                &_ => panic!("Unknown entry in full: {}", file),
+                            }
                         },
-                        "memory" => {
-                            psi.memory_some_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.memory_some_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.memory_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.memory_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
-                        },
-                        &_ => panic!("Unknown entry in some: {}", file),
+                        Some(&_) => panic!("Unknown entry in pressure: {}", line),
+                        None => {},
                     }
-                },
-                Some("full") => {
-                    match file {
-                        "cpu" => {
-                            psi.cpu_full_avg10 = Some(line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap());
-                            psi.cpu_full_avg60 = Some(line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap());
-                            psi.cpu_full_avg300 = Some(line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap());
-                            psi.cpu_full_total = Some(line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap());
-                        },
-                        "io" => {
-                            psi.io_full_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.io_full_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.io_full_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.io_full_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
-                        },
-                        "memory" => {
-                            psi.memory_full_avg10 = line.split_whitespace().nth(1).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.memory_full_avg60 = line.split_whitespace().nth(2).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.memory_full_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
-                            psi.memory_full_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
-                        },
-                        &_ => panic!("Unknown entry in full: {}", file),
-                    }
-                },
-                Some(&_) => panic!("Unknown entry in pressure: {}", line),
-                None => {},
-            }
+                }
+                Some(1)
+            },
+            Err(_) => {
+                None
+            },
         }
     }
 }
@@ -269,7 +285,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn create_proc_loadavg_file_and_read() {
+    fn create_proc_pressure_directory_and_files_and_read() {
         let proc_pressure_cpu = "some avg10=1.00 avg60=2.00 avg300=3.00 total=373300065
 full avg10=4.00 avg60=5.00 avg300=6.00 total=0
 ";
@@ -330,6 +346,18 @@ full avg10=16.00 avg60=17.00 avg300=18.00 total=5390695
                 },
             ),
         });
+    }
+    #[test]
+    fn do_not_create_proc_pressure_directory_for_nonexistent_cases_and_read() {
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        create_dir_all(format!("{}", test_path)).expect("Error creating mock directory.");
+
+        let result = Builder::new().path(format!("{}/pressure", test_path).as_str()).read();
+
+        remove_dir_all(test_path).unwrap();
+
+        assert_eq!(result, ProcPressure { psi: None });
     }
 }
 
