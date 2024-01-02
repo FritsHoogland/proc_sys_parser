@@ -137,7 +137,7 @@ impl Default for Psi {
     }
 }
 
-/// Builder pattern for [`ProcLoadavg`]
+/// Builder pattern for [`ProcPressure`]
 pub struct Builder
 {
     pub proc_pressure_path: String
@@ -188,25 +188,6 @@ impl ProcPressure {
             psi: None,
         }
     }
-    /*
-    pub fn parse_proc_pressure(
-        proc_pressure: &str,
-    ) -> ProcLoadavg
-    {
-        let mut fields = proc_loadavg.split_whitespace();
-        let mut fields_copy = fields.clone();
-
-        ProcLoadavg {
-            load_1: fields.next().unwrap().parse::<f64>().unwrap(),
-            load_5: fields.next().unwrap().parse::<f64>().unwrap(),
-            load_15: fields.next().unwrap().parse::<f64>().unwrap(),
-            current_runnable: fields.next().unwrap().split('/').next().unwrap().parse::<u64>().unwrap(),
-            total: fields_copy.nth(3).unwrap().split('/').nth(1).unwrap().parse::<u64>().unwrap(),
-            last_pid: fields.next().unwrap().parse::<u64>().unwrap(),
-        }
-    }
-
-     */
     pub fn read_proc_pressure(proc_pressure_path: &str) -> ProcPressure
     {
         let mut proc_pressure = ProcPressure::new();
