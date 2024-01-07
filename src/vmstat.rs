@@ -294,6 +294,7 @@ pub struct ProcVmStat {
     nr_foll_pin_released: u64,
     nr_kernel_stack: u64,
     nr_shadow_call_stack: u64,
+    /// absolute number: number of pages used for pagetables
     nr_page_table_pages: u64,
     nr_sec_page_table_pages: u64,
     nr_swapcached: u64,
@@ -308,14 +309,19 @@ pub struct ProcVmStat {
     pgpgin: u64,
     /// counter: the number of kilobytes paged out (written) to disk
     pgpgout: u64,
-    // counter: the number of pages swapped in (read back from swap device)
+    /// counter: the number of pages swapped in (read back from swap device)
     pswpin: u64,
-    // counter: the number of pages swapped out (written to swap device)
+    /// counter: the number of pages swapped out (written to swap device)
     pswpout: u64,
+    /// counter: the number of page allocations in dma memory
     pgalloc_dma: u64,
+    /// counter: the number of page allocations in dma32 memory
     pgalloc_dma32: u64,
+    /// counter: the number of page allocations in normal memory
     pgalloc_normal: u64,
+    /// counter: the number of page allocations in movable memory
     pgalloc_movable: u64,
+    /// counter: the number of page allocations in device memory
     pgalloc_device: u64,
     allocstall_dma: u64,
     allocstall_dma32: u64,
@@ -327,9 +333,11 @@ pub struct ProcVmStat {
     pgskip_normal: u64,
     pgskip_movable: u64,
     pgskip_device: u64,
-    /// counter: the number of pages freed by the page deamon
+    /// counter: the number of pages placed in the freelist
     pgfree: u64,
+    /// counter: the number of pages moved from inactive -> active
     pgactivate: u64,
+    /// counter: the number of pages moved from active -> inactive
     pgdeactivate: u64,
     pglazyfree: u64,
     pglazyfreed: u64,
@@ -337,29 +345,45 @@ pub struct ProcVmStat {
     pgfault: u64,
     /// counter: the number of page faults requiring a disk read
     pgmajfault: u64,
+    /// counter: the number of scanned pages in an active LRU list
     pgrefill: u64,
     pgreuse: u64,
+    /// counter: the number of pages reclaimed from the pagecache and swapcache by kswapd
     pgsteal_kswapd: u64,
+    /// counter: the number of pages reclaimed from by the pagecache and swapcache by user tasks
     pgsteal_direct: u64,
+    /// counter: the number of pages reclaimed from the pagecache and swapcache by khugepaged
     pgsteal_khugepaged: u64,
     pgdemote_kswapd: u64,
     pgdemote_direct: u64,
     pgdemote_khugepaged: u64,
+    /// counter: the number of pages scanned by kswapd
     pgscan_kswapd: u64,
+    /// counter: the number of pages scanned by user tasks
     pgscan_direct: u64,
+    /// counter: the number of pages scanned by khugepagd
     pgscan_khugepaged: u64,
+    /// counter: the number of occurences that direct reclaimers (user tasks) get throttled 
+    /// This means they get stalled. Suggested solution is increasing vm.min_free_kbytes.
     pgscan_direct_throttle: u64,
+    /// counter: the number of pages scanned from anonymous memory
     pgscan_anon: u64,
+    /// counter: the number of pages scanned from file backed memory
     pgscan_file: u64,
+    /// counter: the number of pages reclaimed from anonymous memory
     pgsteal_anon: u64,
+    /// counter: the number of pages reclaimed from file backed memory
     pgsteal_file: u64,
     zone_reclaim_failed: u64,
+    /// counter: the number of pages reclaimed via inode freeing
     pginodesteal: u64,
     slabs_scanned: u64,
+    /// counter: the number of pages reclaimed by kswapd via inode freeing
     kswapd_inodesteal: u64,
     kswapd_low_wmark_hit_quickly: u64,
     kswapd_high_wmark_hit_quickly: u64,
     pageoutrun: u64,
+    /// counter: the number of pages rotated to the tail of the LRU
     pgrotated: u64,
     /// counter: the number of requests for dropping the page cache
     drop_pagecache: u64,
@@ -397,9 +421,12 @@ pub struct ProcVmStat {
     unevictable_pgs_munlocked: u64,
     unevictable_pgs_cleared: u64,
     unevictable_pgs_stranded: u64,
+    /// counter: the number of transparent hugepages allocated to satisfy a page fault
     thp_fault_alloc: u64,
     thp_fault_fallback: u64,
     thp_fault_fallback_charge: u64,
+    /// counter: the number of transparent hugepages allocated to allow collapsing an existing
+    /// range of pages
     thp_collapse_alloc: u64,
     thp_collapse_alloc_failed: u64,
     thp_file_alloc: u64,
@@ -415,7 +442,12 @@ pub struct ProcVmStat {
     thp_scan_exceed_share_pte: u64,
     thp_zero_page_alloc: u64,
     thp_zero_page_alloc_failed: u64,
+    /// counter: the number of transparent hugepages which are swapped out in one piece (wihtout
+    /// splitting)
     thp_swpout: u64,
+    /// clounter: the number of transparent hugepages which are split before swapout. 
+    /// This usually happens because of the inability to allocate continuous swap space for the
+    /// huge page.
     thp_swpout_fallback: u64,
     balloon_inflate: u64,
     balloon_deflate: u64,
@@ -426,6 +458,7 @@ pub struct ProcVmStat {
     cow_ksm: u64,
     zswpin: u64,
     zswpout: u64,
+    /// absolute number: number of NFS unstable pages.
     nr_unstable: u64,
 }
 
