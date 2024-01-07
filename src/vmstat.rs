@@ -463,8 +463,8 @@ impl ProcVmStat {
     pub fn parse_proc_vmstat_output(proc_vmstat: &str) -> ProcVmStat {
         let mut procvmstat = ProcVmStat::new();
         for line in proc_vmstat.lines() {
-            let statistic = &line.split_whitespace().next().unwrap();
-            match *statistic {
+            let statistic = line.split_whitespace().next().unwrap();
+            match statistic {
                 "nr_free_pages" => {
                     procvmstat.nr_free_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
@@ -934,7 +934,6 @@ impl ProcVmStat {
             .unwrap_or(0)
     }
     pub fn read_proc_vmstat(proc_vmstat_file: &str) -> ProcVmStat {
-        //let proc_stat_file = proc_stat_file.unwrap_or("/proc/stat");
         let proc_vmstat_output = read_to_string(proc_vmstat_file)
             .unwrap_or_else(|error| panic!("Error {} reading file: {}", error, proc_vmstat_file));
         ProcVmStat::parse_proc_vmstat_output(&proc_vmstat_output)
