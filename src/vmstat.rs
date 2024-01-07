@@ -463,542 +463,463 @@ impl ProcVmStat {
     pub fn parse_proc_vmstat_output(proc_vmstat: &str) -> ProcVmStat {
         let mut procvmstat = ProcVmStat::new();
         for line in proc_vmstat.lines() {
-            match line {
-                line if line.starts_with("nr_free_pages ") => {
+            let statistic = &line.split_whitespace().next().unwrap();
+            match *statistic {
+                "nr_free_pages" => {
                     procvmstat.nr_free_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_zone_inactive_anon ") => {
+                "nr_zone_inactive_anon" => {
                     procvmstat.nr_zone_inactive_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_zone_active_anon ") => {
+                "nr_zone_active_anon" => {
                     procvmstat.nr_zone_active_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_zone_inactive_file ") => {
+                "nr_zone_inactive_file" => {
                     procvmstat.nr_zone_inactive_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_zone_active_file ") => {
+                "nr_zone_active_file" => {
                     procvmstat.nr_zone_active_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_zone_unevictable ") => {
+                "nr_zone_unevictable" => {
                     procvmstat.nr_zone_unevictable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_zone_write_pending ") => {
+                "nr_zone_write_pending" => {
                     procvmstat.nr_zone_write_pending = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_mlock ") => {
-                    procvmstat.nr_mlock = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_bounce ") => {
-                    procvmstat.nr_bounce = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_zspages ") => {
-                    procvmstat.nr_zspages = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_free_cma ") => {
-                    procvmstat.nr_free_cma = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("numa_hit ") => {
-                    procvmstat.numa_hit = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("numa_miss ") => {
-                    procvmstat.numa_miss = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("numa_foreign ") => {
+                "nr_mlock" => procvmstat.nr_mlock = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_bounce" => procvmstat.nr_bounce = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_zspages" => procvmstat.nr_zspages = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_free_cma" => procvmstat.nr_free_cma = ProcVmStat::parse_proc_vmstat_line(line),
+                "numa_hit" => procvmstat.numa_hit = ProcVmStat::parse_proc_vmstat_line(line),
+                "numa_miss" => procvmstat.numa_miss = ProcVmStat::parse_proc_vmstat_line(line),
+                "numa_foreign" => {
                     procvmstat.numa_foreign = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("numa_interleave ") => {
+                "numa_interleave" => {
                     procvmstat.numa_interleave = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("numa_local ") => {
-                    procvmstat.numa_local = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("numa_other ") => {
-                    procvmstat.numa_other = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_inactive_anon ") => {
+                "numa_local" => procvmstat.numa_local = ProcVmStat::parse_proc_vmstat_line(line),
+                "numa_other" => procvmstat.numa_other = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_inactive_anon" => {
                     procvmstat.nr_inactive_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_active_anon ") => {
+                "nr_active_anon" => {
                     procvmstat.nr_active_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_inactive_file ") => {
+                "nr_inactive_file" => {
                     procvmstat.nr_inactive_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_active_file ") => {
+                "nr_active_file" => {
                     procvmstat.nr_active_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_unevictable ") => {
+                "nr_unevictable" => {
                     procvmstat.nr_unevictable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_slab_reclaimable ") => {
+                "nr_slab_reclaimable" => {
                     procvmstat.nr_slab_reclaimable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_slab_unreclaimable ") => {
+                "nr_slab_unreclaimable" => {
                     procvmstat.nr_slab_unreclaimable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_isolated_anon ") => {
+                "nr_isolated_anon" => {
                     procvmstat.nr_isolated_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_isolated_file ") => {
+                "nr_isolated_file" => {
                     procvmstat.nr_isolated_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_nodes ") => {
+                "workingset_nodes" => {
                     procvmstat.workingset_nodes = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_refault_anon ") => {
+                "workingset_refault_anon" => {
                     procvmstat.workingset_refault_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_refault_file ") => {
+                "workingset_refault_file" => {
                     procvmstat.workingset_refault_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_activate_anon ") => {
+                "workingset_activate_anon" => {
                     procvmstat.workingset_activate_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_activate_file ") => {
+                "workingset_activate_file" => {
                     procvmstat.workingset_activate_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_restore_file ") => {
+                "workingset_restore_file" => {
                     procvmstat.workingset_restore_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_restore_anon ") => {
+                "workingset_restore_anon" => {
                     procvmstat.workingset_restore_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("workingset_nodereclaim ") => {
+                "workingset_nodereclaim" => {
                     procvmstat.workingset_nodereclaim = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_anon_pages ") => {
+                "nr_anon_pages" => {
                     procvmstat.nr_anon_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_mapped ") => {
-                    procvmstat.nr_mapped = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_file_pages ") => {
+                "nr_mapped" => procvmstat.nr_mapped = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_file_pages" => {
                     procvmstat.nr_file_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_dirty ") => {
-                    procvmstat.nr_dirty = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_writeback ") => {
+                "nr_dirty" => procvmstat.nr_dirty = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_writeback" => {
                     procvmstat.nr_writeback = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_writeback_temp ") => {
+                "nr_writeback_temp" => {
                     procvmstat.nr_writeback_temp = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_shmem ") => {
-                    procvmstat.nr_shmem = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_shmem_hugepages ") => {
+                "nr_shmem" => procvmstat.nr_shmem = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_shmem_hugepages" => {
                     procvmstat.nr_shmem_hugepages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_shmem_pmdmapped ") => {
+                "nr_shmem_pmdmapped" => {
                     procvmstat.nr_shmem_pmdmapped = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_file_hugepages ") => {
+                "nr_file_hugepages" => {
                     procvmstat.nr_file_hugepages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_file_pmdmapped ") => {
+                "nr_file_pmdmapped" => {
                     procvmstat.nr_file_pmdmapped = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_anon_transparent_hugepages ") => {
+                "nr_anon_transparent_hugepages" => {
                     procvmstat.nr_anon_transparent_hugepages =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_vmscan_write ") => {
+                "nr_vmscan_write" => {
                     procvmstat.nr_vmscan_write = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_vmscan_immediate_reclaim ") => {
+                "nr_vmscan_immediate_reclaim" => {
                     procvmstat.nr_vmscan_immediate_reclaim =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_dirtied ") => {
-                    procvmstat.nr_dirtied = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_written ") => {
-                    procvmstat.nr_written = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_throttled_written ") => {
+                "nr_dirtied" => procvmstat.nr_dirtied = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_written" => procvmstat.nr_written = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_throttled_written" => {
                     procvmstat.nr_throttled_written = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_kernel_misc_reclaimable ") => {
+                "nr_kernel_misc_reclaimable" => {
                     procvmstat.nr_kernel_misc_reclaimable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_foll_pin_acquired ") => {
+                "nr_foll_pin_acquired" => {
                     procvmstat.nr_foll_pin_acquired = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_foll_pin_released ") => {
+                "nr_foll_pin_released" => {
                     procvmstat.nr_foll_pin_released = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_kernel_stack ") => {
+                "nr_kernel_stack" => {
                     procvmstat.nr_kernel_stack = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_shadow_call_stack ") => {
+                "nr_shadow_call_stack" => {
                     procvmstat.nr_shadow_call_stack = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_page_table_pages ") => {
+                "nr_page_table_pages" => {
                     procvmstat.nr_page_table_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_sec_page_table_pages ") => {
+                "nr_sec_page_table_pages" => {
                     procvmstat.nr_sec_page_table_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_swapcached ") => {
+                "nr_swapcached" => {
                     procvmstat.nr_swapcached = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgpromote_success ") => {
+                "pgpromote_success" => {
                     procvmstat.pgpromote_success = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgpromote_candidate ") => {
+                "pgpromote_candidate" => {
                     procvmstat.pgpromote_candidate = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_dirty_threshold ") => {
+                "nr_dirty_threshold" => {
                     procvmstat.nr_dirty_threshold = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("nr_dirty_background_threshold ") => {
+                "nr_dirty_background_threshold" => {
                     procvmstat.nr_dirty_background_threshold =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgpgin ") => {
-                    procvmstat.pgpgin = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgpgout ") => {
-                    procvmstat.pgpgout = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pswpin ") => {
-                    procvmstat.pswpin = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pswpout ") => {
-                    procvmstat.pswpout = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgalloc_dma ") => {
-                    procvmstat.pgalloc_dma = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgalloc_dma32 ") => {
+                "pgpgin" => procvmstat.pgpgin = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgpgout" => procvmstat.pgpgout = ProcVmStat::parse_proc_vmstat_line(line),
+                "pswpin" => procvmstat.pswpin = ProcVmStat::parse_proc_vmstat_line(line),
+                "pswpout" => procvmstat.pswpout = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgalloc_dma" => procvmstat.pgalloc_dma = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgalloc_dma32" => {
                     procvmstat.pgalloc_dma32 = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgalloc_normal ") => {
+                "pgalloc_normal" => {
                     procvmstat.pgalloc_normal = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgalloc_movable ") => {
+                "pgalloc_movable" => {
                     procvmstat.nr_file_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgalloc_device ") => {
+                "pgalloc_device" => {
                     procvmstat.pgalloc_device = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("allocstall_dma ") => {
+                "allocstall_dma" => {
                     procvmstat.allocstall_dma = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("allocstall_dma32 ") => {
+                "allocstall_dma32" => {
                     procvmstat.allocstall_dma32 = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("allocstall_normal ") => {
+                "allocstall_normal" => {
                     procvmstat.allocstall_normal = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("allocstall_movable ") => {
+                "allocstall_movable" => {
                     procvmstat.allocstall_movable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("allocstall_device ") => {
+                "allocstall_device" => {
                     procvmstat.allocstall_device = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgskip_dma ") => {
-                    procvmstat.pgskip_dma = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgskip_dma32 ") => {
+                "pgskip_dma" => procvmstat.pgskip_dma = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgskip_dma32" => {
                     procvmstat.pgskip_dma32 = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgskip_normal ") => {
+                "pgskip_normal" => {
                     procvmstat.pgskip_normal = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgskip_movable ") => {
+                "pgskip_movable" => {
                     procvmstat.pgskip_movable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgskip_device ") => {
+                "pgskip_device" => {
                     procvmstat.pgskip_device = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgfree ") => {
-                    procvmstat.pgfree = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgactivate ") => {
-                    procvmstat.pgactivate = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgdeactivate ") => {
+                "pgfree" => procvmstat.pgfree = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgactivate" => procvmstat.pgactivate = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgdeactivate" => {
                     procvmstat.pgdeactivate = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pglazyfree ") => {
-                    procvmstat.pglazyfree = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgfault ") => {
-                    procvmstat.pgfault = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgmajfault ") => {
-                    procvmstat.pgmajfault = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pglazyfreed ") => {
-                    procvmstat.pglazyfreed = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgrefill ") => {
-                    procvmstat.pgrefill = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgreuse ") => {
-                    procvmstat.pgreuse = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgsteal_kswapd ") => {
+                "pglazyfree" => procvmstat.pglazyfree = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgfault" => procvmstat.pgfault = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgmajfault" => procvmstat.pgmajfault = ProcVmStat::parse_proc_vmstat_line(line),
+                "pglazyfreed" => procvmstat.pglazyfreed = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgrefill" => procvmstat.pgrefill = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgreuse" => procvmstat.pgreuse = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgsteal_kswapd" => {
                     procvmstat.pgsteal_kswapd = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgsteal_direct ") => {
+                "pgsteal_direct" => {
                     procvmstat.pgsteal_direct = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgsteal_khugepaged ") => {
+                "pgsteal_khugepaged" => {
                     procvmstat.pgsteal_khugepaged = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgdemote_kswapd ") => {
+                "pgdemote_kswapd" => {
                     procvmstat.pgdemote_kswapd = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgdemote_direct ") => {
+                "pgdemote_direct" => {
                     procvmstat.pgdemote_direct = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgdemote_khugepaged ") => {
+                "pgdemote_khugepaged" => {
                     procvmstat.pgdemote_khugepaged = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgscan_kswapd ") => {
+                "pgscan_kswapd" => {
                     procvmstat.pgscan_kswapd = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgscan_direct ") => {
+                "pgscan_direct" => {
                     procvmstat.pgscan_direct = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgscan_khugepaged ") => {
+                "pgscan_khugepaged" => {
                     procvmstat.pgscan_khugepaged = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgscan_direct_throttle ") => {
+                "pgscan_direct_throttle" => {
                     procvmstat.pgscan_direct_throttle = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgscan_anon ") => {
-                    procvmstat.pgscan_anon = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgscan_file ") => {
-                    procvmstat.pgscan_file = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgsteal_anon ") => {
+                "pgscan_anon" => procvmstat.pgscan_anon = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgscan_file" => procvmstat.pgscan_file = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgsteal_anon" => {
                     procvmstat.pgsteal_anon = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgsteal_file ") => {
+                "pgsteal_file" => {
                     procvmstat.pgsteal_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("zone_reclaim_failed ") => {
+                "zone_reclaim_failed" => {
                     procvmstat.zone_reclaim_failed = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pginodesteal ") => {
+                "pginodesteal" => {
                     procvmstat.pginodesteal = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("slabs_scanned ") => {
+                "slabs_scanned" => {
                     procvmstat.slabs_scanned = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("kswapd_inodesteal ") => {
+                "kswapd_inodesteal" => {
                     procvmstat.kswapd_inodesteal = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("kswapd_low_wmark_hit_quickly ") => {
+                "kswapd_low_wmark_hit_quickly" => {
                     procvmstat.kswapd_low_wmark_hit_quickly =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("kswapd_high_wmark_hit_quickly ") => {
+                "kswapd_high_wmark_hit_quickly" => {
                     procvmstat.kswapd_high_wmark_hit_quickly =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pageoutrun ") => {
-                    procvmstat.pageoutrun = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("pgrotated ") => {
-                    procvmstat.pgrotated = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("drop_pagecache ") => {
+                "pageoutrun" => procvmstat.pageoutrun = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgrotated" => procvmstat.pgrotated = ProcVmStat::parse_proc_vmstat_line(line),
+                "drop_pagecache" => {
                     procvmstat.drop_pagecache = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("drop_slab ") => {
-                    procvmstat.drop_slab = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("oom_kill ") => {
-                    procvmstat.oom_kill = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("numa_pte_updates ") => {
+                "drop_slab" => procvmstat.drop_slab = ProcVmStat::parse_proc_vmstat_line(line),
+                "oom_kill" => procvmstat.oom_kill = ProcVmStat::parse_proc_vmstat_line(line),
+                "numa_pte_updates" => {
                     procvmstat.numa_pte_updates = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("numa_huge_pte_updates ") => {
+                "numa_huge_pte_updates" => {
                     procvmstat.numa_huge_pte_updates = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("numa_hint_faults ") => {
+                "numa_hint_faults" => {
                     procvmstat.numa_hint_faults = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("numa_hint_faults_local ") => {
+                "numa_hint_faults_local" => {
                     procvmstat.numa_hint_faults_local = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("numa_pages_migrated ") => {
+                "numa_pages_migrated" => {
                     procvmstat.numa_pages_migrated = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgmigrate_success ") => {
+                "pgmigrate_success" => {
                     procvmstat.pgmigrate_success = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("pgmigrate_fail ") => {
+                "pgmigrate_fail" => {
                     procvmstat.pgmigrate_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_migration_success ") => {
+                "thp_migration_success" => {
                     procvmstat.thp_migration_success = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_migration_fail ") => {
+                "thp_migration_fail" => {
                     procvmstat.thp_migration_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_migration_split ") => {
+                "thp_migration_split" => {
                     procvmstat.thp_migration_split = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_migrate_scanned ") => {
+                "compact_migrate_scanned" => {
                     procvmstat.compact_migrate_scanned = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_free_scanned ") => {
+                "compact_free_scanned" => {
                     procvmstat.compact_free_scanned = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_isolated ") => {
+                "compact_isolated" => {
                     procvmstat.compact_isolated = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_stall ") => {
+                "compact_stall" => {
                     procvmstat.compact_stall = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_fail ") => {
+                "compact_fail" => {
                     procvmstat.compact_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_success ") => {
+                "compact_success" => {
                     procvmstat.compact_success = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_daemon_wake ") => {
+                "compact_daemon_wake" => {
                     procvmstat.compact_daemon_wake = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_daemon_migrate_scanned ") => {
+                "compact_daemon_migrate_scanned" => {
                     procvmstat.compact_daemon_migrate_scanned =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("compact_daemon_free_scanned ") => {
+                "compact_daemon_free_scanned" => {
                     procvmstat.compact_daemon_free_scanned =
                         ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("htlb_buddy_alloc_success ") => {
+                "htlb_buddy_alloc_success" => {
                     procvmstat.htlb_buddy_alloc_success = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("htlb_buddy_alloc_fail ") => {
+                "htlb_buddy_alloc_fail" => {
                     procvmstat.htlb_buddy_alloc_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("cma_alloc_success ") => {
+                "cma_alloc_success" => {
                     procvmstat.cma_alloc_success = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("cma_alloc_fail ") => {
+                "cma_alloc_fail" => {
                     procvmstat.cma_alloc_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_culled ") => {
+                "unevictable_pgs_culled" => {
                     procvmstat.unevictable_pgs_culled = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_scanned ") => {
+                "unevictable_pgs_scanned" => {
                     procvmstat.unevictable_pgs_scanned = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_rescued ") => {
+                "unevictable_pgs_rescued" => {
                     procvmstat.unevictable_pgs_rescued = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_mlocked ") => {
+                "unevictable_pgs_mlocked" => {
                     procvmstat.unevictable_pgs_mlocked = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_munlocked ") => {
+                "unevictable_pgs_munlocked" => {
                     procvmstat.unevictable_pgs_munlocked = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_cleared ") => {
+                "unevictable_pgs_cleared" => {
                     procvmstat.unevictable_pgs_cleared = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("unevictable_pgs_stranded ") => {
+                "unevictable_pgs_stranded" => {
                     procvmstat.unevictable_pgs_stranded = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_fault_alloc ") => {
+                "thp_fault_alloc" => {
                     procvmstat.thp_fault_alloc = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_fault_fallback ") => {
+                "thp_fault_fallback" => {
                     procvmstat.thp_fault_fallback = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_fault_fallback_charge ") => {
+                "thp_fault_fallback_charge" => {
                     procvmstat.thp_fault_fallback_charge = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_collapse_alloc ") => {
+                "thp_collapse_alloc" => {
                     procvmstat.thp_collapse_alloc = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_collapse_alloc_failed ") => {
+                "thp_collapse_alloc_failed" => {
                     procvmstat.thp_collapse_alloc_failed = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_file_alloc ") => {
+                "thp_file_alloc" => {
                     procvmstat.thp_file_alloc = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_file_fallback ") => {
+                "thp_file_fallback" => {
                     procvmstat.thp_file_fallback = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_file_fallback_charge ") => {
+                "thp_file_fallback_charge" => {
                     procvmstat.thp_file_fallback_charge = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_file_mapped ") => {
+                "thp_file_mapped" => {
                     procvmstat.thp_file_mapped = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_split_page ") => {
+                "thp_split_page" => {
                     procvmstat.thp_split_page = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_split_page_failed ") => {
+                "thp_split_page_failed" => {
                     procvmstat.thp_split_page_failed = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_deferred_split_page ") => {
+                "thp_deferred_split_page" => {
                     procvmstat.thp_deferred_split_page = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_split_pmd ") => {
+                "thp_split_pmd" => {
                     procvmstat.thp_split_pmd = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_scan_exceed_none_pte ") => {
+                "thp_scan_exceed_none_pte" => {
                     procvmstat.thp_scan_exceed_none_pte = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_scan_exceed_swap_pte ") => {
+                "thp_scan_exceed_swap_pte" => {
                     procvmstat.thp_scan_exceed_swap_pte = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_scan_exceed_share_pte ") => {
+                "thp_scan_exceed_share_pte" => {
                     procvmstat.thp_scan_exceed_share_pte = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_zero_page_alloc ") => {
+                "thp_zero_page_alloc" => {
                     procvmstat.thp_zero_page_alloc = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_zero_page_alloc_failed ") => {
+                "thp_zero_page_alloc_failed" => {
                     procvmstat.thp_zero_page_alloc_failed = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("thp_swpout ") => {
-                    procvmstat.thp_swpout = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("thp_swpout_fallback ") => {
+                "thp_swpout" => procvmstat.thp_swpout = ProcVmStat::parse_proc_vmstat_line(line),
+                "thp_swpout_fallback" => {
                     procvmstat.thp_swpout_fallback = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("balloon_inflate ") => {
+                "balloon_inflate" => {
                     procvmstat.balloon_inflate = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("balloon_deflate ") => {
+                "balloon_deflate" => {
                     procvmstat.balloon_deflate = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("balloon_migrate ") => {
+                "balloon_migrate" => {
                     procvmstat.balloon_migrate = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("swap_ra ") => {
-                    procvmstat.swap_ra = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("swap_ra_hit ") => {
-                    procvmstat.swap_ra_hit = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("ksm_swpin_copy ") => {
+                "swap_ra" => procvmstat.swap_ra = ProcVmStat::parse_proc_vmstat_line(line),
+                "swap_ra_hit" => procvmstat.swap_ra_hit = ProcVmStat::parse_proc_vmstat_line(line),
+                "ksm_swpin_copy" => {
                     procvmstat.ksm_swpin_copy = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                line if line.starts_with("cow_ksm ") => {
-                    procvmstat.cow_ksm = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("zswpin ") => {
-                    procvmstat.zswpin = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("zswpout ") => {
-                    procvmstat.zswpout = ProcVmStat::parse_proc_vmstat_line(line)
-                }
-                line if line.starts_with("nr_unstable ") => {
-                    procvmstat.nr_unstable = ProcVmStat::parse_proc_vmstat_line(line)
-                }
+                "cow_ksm" => procvmstat.cow_ksm = ProcVmStat::parse_proc_vmstat_line(line),
+                "zswpin" => procvmstat.zswpin = ProcVmStat::parse_proc_vmstat_line(line),
+                "zswpout" => procvmstat.zswpout = ProcVmStat::parse_proc_vmstat_line(line),
+                "nr_unstable" => procvmstat.nr_unstable = ProcVmStat::parse_proc_vmstat_line(line),
                 _ => panic!("Unknown line entry found in vmstat: {}", line),
             }
         }
