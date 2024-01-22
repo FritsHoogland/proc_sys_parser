@@ -86,7 +86,7 @@ let proc_meminfo = Builder::new().file_name("/myproc/meminfo").read();
 use std::fs::read_to_string;
 
 /// Struct for holding `/proc/meminfo` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcMemInfo {
     pub memtotal: u64,
     pub memfree: u64,
@@ -142,6 +142,7 @@ pub struct ProcMemInfo {
     pub hugepages_surp: u64,
     pub hugepagesize: u64,
     pub hugetlb: u64,
+    pub directmap4k: u64,
 }
 
 /// Builder pattern for [`ProcMemInfo`]
@@ -177,69 +178,9 @@ pub fn read() -> ProcMemInfo {
     Builder::new().read()
 }
 
-impl Default for ProcMemInfo {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 impl ProcMemInfo {
     pub fn new() -> ProcMemInfo {
-        ProcMemInfo {
-            memtotal: 0,
-            memfree: 0,
-            memavailable: 0,
-            buffers: 0,
-            cached: 0,
-            swapcached: 0,
-            active: 0,
-            inactive: 0,
-            active_anon: 0,
-            inactive_anon: 0,
-            active_file: 0,
-            inactive_file: 0,
-            unevictable: 0,
-            mlocked: 0,
-            swaptotal: 0,
-            swapfree: 0,
-            zswap: 0,
-            zswapped: 0,
-            dirty: 0,
-            writeback: 0,
-            anonpages: 0,
-            mapped: 0,
-            shmem: 0,
-            kreclaimable: 0,
-            slab: 0,
-            sreclaimable: 0,
-            sunreclaim: 0,
-            kernelstack: 0,
-            shadowcallstack: 0,
-            pagetables: 0,
-            secpagetables: 0,
-            nfs_unstable: 0,
-            bounce: 0,
-            writebacktmp: 0,
-            commitlimit: 0,
-            committed_as: 0,
-            vmalloctotal: 0,
-            vmallocused: 0,
-            vmallocchunk: 0,
-            percpu: 0,
-            hardwarecorrupted: 0,
-            anonhugepages: 0,
-            shmemhugepages: 0,
-            shmempmdmapped: 0,
-            filehugepages: 0,
-            filepmdmapped: 0,
-            cmatotal: 0,
-            cmafree: 0,
-            hugepages_total: 0,
-            hugepages_free: 0,
-            hugepages_rsvd: 0,
-            hugepages_surp: 0,
-            hugepagesize: 0,
-            hugetlb: 0,
-        }
+        ProcMemInfo::default()
     }
     pub fn parse_proc_meminfo_output(proc_meminfo: &str) -> ProcMemInfo {
         let mut procmeminfo = ProcMemInfo::new();
@@ -407,7 +348,10 @@ impl ProcMemInfo {
                 line if line.starts_with("Hugetlb:") => {
                     procmeminfo.hugetlb = ProcMemInfo::parse_proc_meminfo_line(line)
                 }
-                _ => panic!("Unknown line entry found in meminfo: {}", line),
+                line if line.starts_with("DirectMap4k:") => {
+                    procmeminfo.directmap4k = ProcMemInfo::parse_proc_meminfo_line(line)
+                }
+                _ => println!("Warning: unknown line entry found in meminfo: {}", line),
             }
         }
         procmeminfo
@@ -515,6 +459,7 @@ Hugetlb:               0 kB";
                 active_file: 793804,
                 inactive_file: 544236,
                 unevictable: 4000,
+                directmap4k: 0,
                 mlocked: 0,
                 swaptotal: 0,
                 swapfree: 0,
@@ -688,7 +633,8 @@ Hugetlb:               0 kB";
                 hugepages_rsvd: 0,
                 hugepages_surp: 0,
                 hugepagesize: 2048,
-                hugetlb: 0
+                hugetlb: 0,
+                directmap4k: 0,
             }
         );
     }
