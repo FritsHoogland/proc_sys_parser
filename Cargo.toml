@@ -1,6 +1,6 @@
 [package]
 name = "proc_sys_parser"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2021"
 license = "Apache-2.0"
 keywords = ["linux", "proc", "parser"]
