@@ -169,8 +169,7 @@ impl Default for SysBlock
 
 /// Struct for holding `/sys/block/<device>` statistics and information
 #[derive(Debug, PartialEq, Default)]
-pub struct BlockDevice
-{
+pub struct BlockDevice {
     /// `/sys/block/<device>` name.
     pub device_name: String,
     //----------------------------------------------------------------------------------------------------------------//
@@ -199,7 +198,8 @@ pub struct BlockDevice
     pub discard_alignment: u64,
     /// `/sys/block/<device>/diskseq`
     /// Disk sequence number, which is a monotonically increasing number assigned to every drive.
-    pub diskseq: u64,
+    /// This file does not exist on EL7.
+    pub diskseq: Option<u64>,
     /// `/sys/block/<device>/hidden`
     /// The block device is hidden. It doesn't produce events, and can't be openend from userspace.
     /// Used for the underlying components of multipath devices.
@@ -453,7 +453,7 @@ impl SysBlock {
     )
     {
         let diskseq = read_to_string(blockdevice_dir.path().join("diskseq")).unwrap_or_else(|error| panic!("Error {} reading block device diskseq sysfs entry", error)).trim_end_matches('\n').to_string();
-        blockdevice_data.diskseq = diskseq.parse::<u64>().unwrap();
+        blockdevice_data.diskseq = Some(diskseq.parse::<u64>().unwrap());
     }
     fn parse_hidden(
         blockdevice_data: &mut BlockDevice,
@@ -1004,7 +1004,7 @@ mod tests {
                     ),
                     alignment_offset: 0,
                     cache_type: "write back".to_string(),
-                    diskseq: 9,
+                    diskseq: Some(9),
                     hidden: 0,
                     inflight_reads: 1,
                     inflight_writes: 2,
@@ -1168,7 +1168,7 @@ mod tests {
                                stat_flush_requests_time_spent_ms: None,
                                alignment_offset: 0,
                                cache_type: "write back".to_string(),
-                               diskseq: 9,
+                               diskseq: Some(9),
                                hidden: 0,
                                inflight_reads: 1,
                                inflight_writes: 2,

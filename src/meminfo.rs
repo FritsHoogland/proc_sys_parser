@@ -142,7 +142,8 @@ pub struct ProcMemInfo {
     pub hugepages_surp: u64,
     pub hugepagesize: u64,
     pub hugetlb: u64,
-    pub directmap4k: u64,
+    pub directmap4k: Option<u64>,
+    pub directmap2m: Option<u64>,
 }
 
 /// Builder pattern for [`ProcMemInfo`]
@@ -348,8 +349,13 @@ impl ProcMemInfo {
                 line if line.starts_with("Hugetlb:") => {
                     procmeminfo.hugetlb = ProcMemInfo::parse_proc_meminfo_line(line)
                 }
+                // Found on EL7
                 line if line.starts_with("DirectMap4k:") => {
-                    procmeminfo.directmap4k = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.directmap4k = Some(ProcMemInfo::parse_proc_meminfo_line(line))
+                }
+                // Found on EL7
+                line if line.starts_with("DirectMap2M:") => {
+                    procmeminfo.directmap2m = Some(ProcMemInfo::parse_proc_meminfo_line(line))
                 }
                 _ => println!("Warning: unknown line entry found in meminfo: {}", line),
             }
@@ -459,7 +465,6 @@ Hugetlb:               0 kB";
                 active_file: 793804,
                 inactive_file: 544236,
                 unevictable: 4000,
-                directmap4k: 0,
                 mlocked: 0,
                 swaptotal: 0,
                 swapfree: 0,
@@ -500,7 +505,9 @@ Hugetlb:               0 kB";
                 hugepages_rsvd: 0,
                 hugepages_surp: 0,
                 hugepagesize: 2048,
-                hugetlb: 0
+                hugetlb: 0,
+                directmap4k: Some(0),
+                directmap2m: Some(0),
             }
         );
     }
@@ -634,7 +641,8 @@ Hugetlb:               0 kB";
                 hugepages_surp: 0,
                 hugepagesize: 2048,
                 hugetlb: 0,
-                directmap4k: 0,
+                directmap4k: Some(0),
+                directmap2m: Some(0),
             }
         );
     }
