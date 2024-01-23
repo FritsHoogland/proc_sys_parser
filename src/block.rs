@@ -185,7 +185,7 @@ pub struct BlockDevice {
     /// |"write back, no read"  | on          | off        |
     ///
     /// <https://docs.kernel.org/scsi/sd-parameters.html>
-    pub cache_type: String,
+    pub cache_type: Option<String>,
     /// From the `/sys/block/<device>/dev` file: block major number.
     pub dev_block_major: u64,
     /// From the `/sys/block/<device>/dev` file: block major number.
@@ -426,8 +426,10 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let cache_type = read_to_string(blockdevice_dir.path().join("cache_type")).unwrap_or("n/a".to_string()).trim_end_matches('\n').to_string();
-        blockdevice_data.cache_type = cache_type;
+        blockdevice_data.cache_type = match read_to_string(blockdevice_dir.path().join("cache_type")) {
+            Ok(result) => Some(result.trim_end_matches('\n').to_string()),
+            Err(_) => None,
+        };
     }
     fn parse_dev(
         blockdevice_data: &mut BlockDevice,
@@ -452,8 +454,10 @@ impl SysBlock {
         blockdevice_dir: &DirEntry,
     )
     {
-        let diskseq = read_to_string(blockdevice_dir.path().join("diskseq")).unwrap_or_else(|error| panic!("Error {} reading block device diskseq sysfs entry", error)).trim_end_matches('\n').to_string();
-        blockdevice_data.diskseq = Some(diskseq.parse::<u64>().unwrap());
+        blockdevice_data.diskseq = match read_to_string(blockdevice_dir.path().join("diskseq")) {
+            Ok(result) => result.trim_end_matches('\n').parse::<u64>().ok(),
+            Err(_) => None,
+        };
     }
     fn parse_hidden(
         blockdevice_data: &mut BlockDevice,
@@ -689,7 +693,6 @@ impl SysBlock {
             blockdevice_data.queue_scheduler = "?".to_string();
         }
     }
-    ///////
     fn parse_queue_write_cache(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
@@ -1003,7 +1006,7 @@ mod tests {
                         304,
                     ),
                     alignment_offset: 0,
-                    cache_type: "write back".to_string(),
+                    cache_type: Some("write back".to_string()),
                     diskseq: Some(9),
                     hidden: 0,
                     inflight_reads: 1,
@@ -1167,7 +1170,7 @@ mod tests {
                                stat_flush_requests_completed_success: None,
                                stat_flush_requests_time_spent_ms: None,
                                alignment_offset: 0,
-                               cache_type: "write back".to_string(),
+                               cache_type: Some("write back".to_string()),
                                diskseq: Some(9),
                                hidden: 0,
                                inflight_reads: 1,

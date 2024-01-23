@@ -506,8 +506,8 @@ Hugetlb:               0 kB";
                 hugepages_surp: 0,
                 hugepagesize: 2048,
                 hugetlb: 0,
-                directmap4k: Some(0),
-                directmap2m: Some(0),
+                directmap4k: None,
+                directmap2m: None,
             }
         );
     }
@@ -641,8 +641,8 @@ Hugetlb:               0 kB";
                 hugepages_surp: 0,
                 hugepagesize: 2048,
                 hugetlb: 0,
-                directmap4k: Some(0),
-                directmap2m: Some(0),
+                directmap4k: None,
+                directmap2m: None,
             }
         );
     }
