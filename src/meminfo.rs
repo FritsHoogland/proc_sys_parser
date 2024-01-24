@@ -84,6 +84,7 @@ let proc_meminfo = Builder::new().file_name("/myproc/meminfo").read();
 
 */
 use std::fs::read_to_string;
+use log::warn;
 
 /// Struct for holding `/proc/meminfo` statistics
 #[derive(Debug, PartialEq, Default)]
@@ -357,7 +358,7 @@ impl ProcMemInfo {
                 line if line.starts_with("DirectMap2M:") => {
                     procmeminfo.directmap2m = Some(ProcMemInfo::parse_proc_meminfo_line(line))
                 }
-                _ => println!("Warning: unknown line entry found in meminfo: {}", line),
+                _ => warn!("meminfo: unknown entry found: {}", line),
             }
         }
         procmeminfo

@@ -53,6 +53,8 @@ let proc_stat = Builder::new().file_name("/myproc/stat").read();
 */
 use nix::unistd::{sysconf, SysconfVar};
 use std::fs::read_to_string;
+use log::warn;
+
 
 /// Struct for holding cpu times in milliseconds
 #[derive(Debug, PartialEq)]
@@ -191,9 +193,7 @@ impl ProcStat {
                 line if line.starts_with("softirq ") => {
                     procstat.softirq = ProcStat::generate_number_vector(line);
                 },
-                _  => {
-                    panic!("Unknown line found in stat: {}", line);
-                },
+                _  => warn!("stat: unknown entry found: {}", line),
             }
         }
         procstat

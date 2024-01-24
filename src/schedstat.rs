@@ -80,6 +80,7 @@ to match the statistic in the vector.
 
 */
 use std::fs::read_to_string;
+use log::warn;
 
 /// Builder pattern for [`ProcSchedStat`]
 pub struct Builder
@@ -161,9 +162,7 @@ impl ProcSchedStat {
                 line if line.starts_with("domain") => {
                     schedstat.domain.push(ProcSchedStat::generate_number_vector(line));
                 },
-                _  => {
-                    panic!("Unknown line found in schedstat: {}", line);
-                },
+                _  => warn!("schedstat: unknown entry found: {}", line),
             }
         }
         schedstat

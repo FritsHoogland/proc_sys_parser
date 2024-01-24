@@ -210,6 +210,7 @@ let proc_vmstat = Builder::new().file_name("/myproc/vmstat").read();
 ```
 */
 use std::fs::read_to_string;
+use log::warn;
 
 /// Struct for holding `/proc/vmstat` statistics
 #[derive(Debug, PartialEq, Default)]
@@ -254,13 +255,13 @@ pub struct ProcVmStat {
     pub nr_slab_unreclaimable: u64,
     pub nr_isolated_anon: u64,
     pub nr_isolated_file: u64,
-    pub workingset_nodes: u64,
-    pub workingset_refault_anon: u64,
-    pub workingset_refault_file: u64,
-    pub workingset_activate_anon: u64,
-    pub workingset_activate_file: u64,
-    pub workingset_restore_anon: u64,
-    pub workingset_restore_file: u64,
+    pub workingset_nodes: Option<u64>,
+    pub workingset_refault_anon: Option<u64>,
+    pub workingset_refault_file: Option<u64>,
+    pub workingset_activate_anon: Option<u64>,
+    pub workingset_activate_file: Option<u64>,
+    pub workingset_restore_anon: Option<u64>,
+    pub workingset_restore_file: Option<u64>,
     pub workingset_nodereclaim: u64,
     /// absolute number: number of anonymous memory pages
     pub nr_anon_pages: u64,
@@ -281,25 +282,25 @@ pub struct ProcVmStat {
     pub nr_shmem: u64,
     pub nr_shmem_hugepages: u64,
     pub nr_shmem_pmdmapped: u64,
-    pub nr_file_hugepages: u64,
-    pub nr_file_pmdmapped: u64,
+    pub nr_file_hugepages: Option<u64>,
+    pub nr_file_pmdmapped: Option<u64>,
     pub nr_anon_transparent_hugepages: u64,
     pub nr_vmscan_write: u64,
     pub nr_vmscan_immediate_reclaim: u64,
     pub nr_dirtied: u64,
     pub nr_written: u64,
-    pub nr_throttled_written: u64,
-    pub nr_kernel_misc_reclaimable: u64,
-    pub nr_foll_pin_acquired: u64,
-    pub nr_foll_pin_released: u64,
+    pub nr_throttled_written: Option<u64>,
+    pub nr_kernel_misc_reclaimable: Option<u64>,
+    pub nr_foll_pin_acquired: Option<u64>,
+    pub nr_foll_pin_released: Option<u64>,
     pub nr_kernel_stack: u64,
-    pub nr_shadow_call_stack: u64,
+    pub nr_shadow_call_stack: Option<u64>,
     /// absolute number: number of pages used for pagetables
     pub nr_page_table_pages: u64,
-    pub nr_sec_page_table_pages: u64,
-    pub nr_swapcached: u64,
-    pub pgpromote_success: u64,
-    pub pgpromote_candidate: u64,
+    pub nr_sec_page_table_pages: Option<u64>,
+    pub nr_swapcached: Option<u64>,
+    pub pgpromote_success: Option<u64>,
+    pub pgpromote_candidate: Option<u64>,
     /// absolute number: the current number of pages used as dirty threshold by the kernel
     pub nr_dirty_threshold: u64,
     /// absolute number: the current number of pages used as dirty background threshold by the
@@ -322,17 +323,17 @@ pub struct ProcVmStat {
     /// counter: the number of page allocations in movable memory
     pub pgalloc_movable: u64,
     /// counter: the number of page allocations in device memory
-    pub pgalloc_device: u64,
+    pub pgalloc_device: Option<u64>,
     pub allocstall_dma: u64,
     pub allocstall_dma32: u64,
     pub allocstall_normal: u64,
     pub allocstall_movable: u64,
-    pub allocstall_device: u64,
+    pub allocstall_device: Option<u64>,
     pub pgskip_dma: u64,
     pub pgskip_dma32: u64,
     pub pgskip_normal: u64,
     pub pgskip_movable: u64,
-    pub pgskip_device: u64,
+    pub pgskip_device: Option<u64>,
     /// counter: the number of pages placed in the freelist
     pub pgfree: u64,
     /// counter: the number of pages moved from inactive -> active
@@ -347,37 +348,37 @@ pub struct ProcVmStat {
     pub pgmajfault: u64,
     /// counter: the number of scanned pages in an active LRU list
     pub pgrefill: u64,
-    pub pgreuse: u64,
+    pub pgreuse: Option<u64>,
     /// counter: the number of pages reclaimed from the pagecache and swapcache by kswapd
     pub pgsteal_kswapd: u64,
     /// counter: the number of pages reclaimed from by the pagecache and swapcache by user tasks
     pub pgsteal_direct: u64,
     /// counter: the number of pages reclaimed from the pagecache and swapcache by khugepaged
-    pub pgsteal_khugepaged: u64,
-    pub pgdemote_kswapd: u64,
-    pub pgdemote_direct: u64,
-    pub pgdemote_khugepaged: u64,
+    pub pgsteal_khugepaged: Option<u64>,
+    pub pgdemote_kswapd: Option<u64>,
+    pub pgdemote_direct: Option<u64>,
+    pub pgdemote_khugepaged: Option<u64>,
     /// counter: the number of pages scanned by kswapd
     pub pgscan_kswapd: u64,
     /// counter: the number of pages scanned by user tasks
     pub pgscan_direct: u64,
     /// counter: the number of pages scanned by khugepagd
-    pub pgscan_khugepaged: u64,
+    pub pgscan_khugepaged: Option<u64>,
     /// counter: the number of occurences that direct reclaimers (user tasks) get throttled 
     /// This means they get stalled. Suggested solution is increasing vm.min_free_kbytes.
     pub pgscan_direct_throttle: u64,
     /// counter: the number of pages scanned from anonymous memory
-    pub pgscan_anon: u64,
+    pub pgscan_anon: Option<u64>,
     /// counter: the number of pages scanned from file backed memory
-    pub pgscan_file: u64,
+    pub pgscan_file: Option<u64>,
     /// counter: the number of pages reclaimed from anonymous memory
-    pub pgsteal_anon: u64,
+    pub pgsteal_anon: Option<u64>,
     /// counter: the number of pages reclaimed from file backed memory
-    pub pgsteal_file: u64,
+    pub pgsteal_file: Option<u64>,
     pub zone_reclaim_failed: u64,
     /// counter: the number of pages reclaimed via inode freeing
     pub pginodesteal: u64,
-    pub slabs_scanned: u64,
+    pub slabs_scanned: Option<u64>,
     /// counter: the number of pages reclaimed by kswapd via inode freeing
     pub kswapd_inodesteal: u64,
     pub kswapd_low_wmark_hit_quickly: u64,
@@ -398,9 +399,9 @@ pub struct ProcVmStat {
     pub numa_pages_migrated: u64,
     pub pgmigrate_success: u64,
     pub pgmigrate_fail: u64,
-    pub thp_migration_success: u64,
-    pub thp_migration_fail: u64,
-    pub thp_migration_split: u64,
+    pub thp_migration_success: Option<u64>,
+    pub thp_migration_fail: Option<u64>,
+    pub thp_migration_split: Option<u64>,
     pub compact_migrate_scanned: u64,
     pub compact_free_scanned: u64,
     pub compact_isolated: u64,
@@ -412,8 +413,8 @@ pub struct ProcVmStat {
     pub compact_daemon_free_scanned: u64,
     pub htlb_buddy_alloc_success: u64,
     pub htlb_buddy_alloc_fail: u64,
-    pub cma_alloc_success: u64,
-    pub cma_alloc_fail: u64,
+    pub cma_alloc_success: Option<u64>,
+    pub cma_alloc_fail: Option<u64>,
     pub unevictable_pgs_culled: u64,
     pub unevictable_pgs_scanned: u64,
     pub unevictable_pgs_rescued: u64,
@@ -424,22 +425,22 @@ pub struct ProcVmStat {
     /// counter: the number of transparent hugepages allocated to satisfy a page fault
     pub thp_fault_alloc: u64,
     pub thp_fault_fallback: u64,
-    pub thp_fault_fallback_charge: u64,
+    pub thp_fault_fallback_charge: Option<u64>,
     /// counter: the number of transparent hugepages allocated to allow collapsing an existing
     /// range of pages
     pub thp_collapse_alloc: u64,
     pub thp_collapse_alloc_failed: u64,
     pub thp_file_alloc: u64,
-    pub thp_file_fallback: u64,
-    pub thp_file_fallback_charge: u64,
+    pub thp_file_fallback: Option<u64>,
+    pub thp_file_fallback_charge: Option<u64>,
     pub thp_file_mapped: u64,
     pub thp_split_page: u64,
     pub thp_split_page_failed: u64,
     pub thp_deferred_split_page: u64,
     pub thp_split_pmd: u64,
-    pub thp_scan_exceed_none_pte: u64,
-    pub thp_scan_exceed_swap_pte: u64,
-    pub thp_scan_exceed_share_pte: u64,
+    pub thp_scan_exceed_none_pte: Option<u64>,
+    pub thp_scan_exceed_swap_pte: Option<u64>,
+    pub thp_scan_exceed_share_pte: Option<u64>,
     pub thp_zero_page_alloc: u64,
     pub thp_zero_page_alloc_failed: u64,
     /// counter: the number of transparent hugepages which are swapped out in one piece (wihtout
@@ -454,10 +455,10 @@ pub struct ProcVmStat {
     pub balloon_migrate: u64,
     pub swap_ra: u64,
     pub swap_ra_hit: u64,
-    pub ksm_swpin_copy: u64,
-    pub cow_ksm: u64,
-    pub zswpin: u64,
-    pub zswpout: u64,
+    pub ksm_swpin_copy: Option<u64>,
+    pub cow_ksm: Option<u64>,
+    pub zswpin: Option<u64>,
+    pub zswpout: Option<u64>,
     /// absolute number: number of NFS unstable pages.
     pub nr_unstable: u64,
 }
@@ -561,25 +562,25 @@ impl ProcVmStat {
                     procvmstat.nr_isolated_file = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "workingset_nodes" => {
-                    procvmstat.workingset_nodes = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_nodes = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_refault_anon" => {
-                    procvmstat.workingset_refault_anon = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_refault_anon = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_refault_file" => {
-                    procvmstat.workingset_refault_file = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_refault_file = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_activate_anon" => {
-                    procvmstat.workingset_activate_anon = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_activate_anon = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_activate_file" => {
-                    procvmstat.workingset_activate_file = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_activate_file = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_restore_file" => {
-                    procvmstat.workingset_restore_file = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_restore_file = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_restore_anon" => {
-                    procvmstat.workingset_restore_anon = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.workingset_restore_anon = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "workingset_nodereclaim" => {
                     procvmstat.workingset_nodereclaim = ProcVmStat::parse_proc_vmstat_line(line)
@@ -606,10 +607,10 @@ impl ProcVmStat {
                     procvmstat.nr_shmem_pmdmapped = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "nr_file_hugepages" => {
-                    procvmstat.nr_file_hugepages = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_file_hugepages = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_file_pmdmapped" => {
-                    procvmstat.nr_file_pmdmapped = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_file_pmdmapped = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_anon_transparent_hugepages" => {
                     procvmstat.nr_anon_transparent_hugepages =
@@ -625,37 +626,37 @@ impl ProcVmStat {
                 "nr_dirtied" => procvmstat.nr_dirtied = ProcVmStat::parse_proc_vmstat_line(line),
                 "nr_written" => procvmstat.nr_written = ProcVmStat::parse_proc_vmstat_line(line),
                 "nr_throttled_written" => {
-                    procvmstat.nr_throttled_written = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_throttled_written = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_kernel_misc_reclaimable" => {
-                    procvmstat.nr_kernel_misc_reclaimable = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_kernel_misc_reclaimable = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_foll_pin_acquired" => {
-                    procvmstat.nr_foll_pin_acquired = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_foll_pin_acquired = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_foll_pin_released" => {
-                    procvmstat.nr_foll_pin_released = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_foll_pin_released = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_kernel_stack" => {
                     procvmstat.nr_kernel_stack = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "nr_shadow_call_stack" => {
-                    procvmstat.nr_shadow_call_stack = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_shadow_call_stack = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_page_table_pages" => {
                     procvmstat.nr_page_table_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "nr_sec_page_table_pages" => {
-                    procvmstat.nr_sec_page_table_pages = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_sec_page_table_pages = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_swapcached" => {
-                    procvmstat.nr_swapcached = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.nr_swapcached = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgpromote_success" => {
-                    procvmstat.pgpromote_success = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgpromote_success = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgpromote_candidate" => {
-                    procvmstat.pgpromote_candidate = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgpromote_candidate = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "nr_dirty_threshold" => {
                     procvmstat.nr_dirty_threshold = ProcVmStat::parse_proc_vmstat_line(line)
@@ -679,7 +680,7 @@ impl ProcVmStat {
                     procvmstat.nr_file_pages = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "pgalloc_device" => {
-                    procvmstat.pgalloc_device = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgalloc_device = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "allocstall_dma" => {
                     procvmstat.allocstall_dma = ProcVmStat::parse_proc_vmstat_line(line)
@@ -694,7 +695,7 @@ impl ProcVmStat {
                     procvmstat.allocstall_movable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "allocstall_device" => {
-                    procvmstat.allocstall_device = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.allocstall_device = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgskip_dma" => procvmstat.pgskip_dma = ProcVmStat::parse_proc_vmstat_line(line),
                 "pgskip_dma32" => {
@@ -707,7 +708,7 @@ impl ProcVmStat {
                     procvmstat.pgskip_movable = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "pgskip_device" => {
-                    procvmstat.pgskip_device = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgskip_device = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgfree" => procvmstat.pgfree = ProcVmStat::parse_proc_vmstat_line(line),
                 "pgactivate" => procvmstat.pgactivate = ProcVmStat::parse_proc_vmstat_line(line),
@@ -719,7 +720,7 @@ impl ProcVmStat {
                 "pgmajfault" => procvmstat.pgmajfault = ProcVmStat::parse_proc_vmstat_line(line),
                 "pglazyfreed" => procvmstat.pglazyfreed = ProcVmStat::parse_proc_vmstat_line(line),
                 "pgrefill" => procvmstat.pgrefill = ProcVmStat::parse_proc_vmstat_line(line),
-                "pgreuse" => procvmstat.pgreuse = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgreuse" => procvmstat.pgreuse = ProcVmStat::parse_proc_vmstat_line_option(line),
                 "pgsteal_kswapd" => {
                     procvmstat.pgsteal_kswapd = ProcVmStat::parse_proc_vmstat_line(line)
                 }
@@ -727,16 +728,16 @@ impl ProcVmStat {
                     procvmstat.pgsteal_direct = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "pgsteal_khugepaged" => {
-                    procvmstat.pgsteal_khugepaged = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgsteal_khugepaged = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgdemote_kswapd" => {
-                    procvmstat.pgdemote_kswapd = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgdemote_kswapd = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgdemote_direct" => {
-                    procvmstat.pgdemote_direct = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgdemote_direct = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgdemote_khugepaged" => {
-                    procvmstat.pgdemote_khugepaged = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgdemote_khugepaged = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgscan_kswapd" => {
                     procvmstat.pgscan_kswapd = ProcVmStat::parse_proc_vmstat_line(line)
@@ -745,18 +746,18 @@ impl ProcVmStat {
                     procvmstat.pgscan_direct = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "pgscan_khugepaged" => {
-                    procvmstat.pgscan_khugepaged = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgscan_khugepaged = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgscan_direct_throttle" => {
                     procvmstat.pgscan_direct_throttle = ProcVmStat::parse_proc_vmstat_line(line)
                 }
-                "pgscan_anon" => procvmstat.pgscan_anon = ProcVmStat::parse_proc_vmstat_line(line),
-                "pgscan_file" => procvmstat.pgscan_file = ProcVmStat::parse_proc_vmstat_line(line),
+                "pgscan_anon" => procvmstat.pgscan_anon = ProcVmStat::parse_proc_vmstat_line_option(line),
+                "pgscan_file" => procvmstat.pgscan_file = ProcVmStat::parse_proc_vmstat_line_option(line),
                 "pgsteal_anon" => {
-                    procvmstat.pgsteal_anon = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgsteal_anon = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "pgsteal_file" => {
-                    procvmstat.pgsteal_file = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.pgsteal_file = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "zone_reclaim_failed" => {
                     procvmstat.zone_reclaim_failed = ProcVmStat::parse_proc_vmstat_line(line)
@@ -765,7 +766,7 @@ impl ProcVmStat {
                     procvmstat.pginodesteal = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "slabs_scanned" => {
-                    procvmstat.slabs_scanned = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.slabs_scanned = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "kswapd_inodesteal" => {
                     procvmstat.kswapd_inodesteal = ProcVmStat::parse_proc_vmstat_line(line)
@@ -807,13 +808,13 @@ impl ProcVmStat {
                     procvmstat.pgmigrate_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "thp_migration_success" => {
-                    procvmstat.thp_migration_success = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_migration_success = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_migration_fail" => {
-                    procvmstat.thp_migration_fail = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_migration_fail = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_migration_split" => {
-                    procvmstat.thp_migration_split = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_migration_split = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "compact_migrate_scanned" => {
                     procvmstat.compact_migrate_scanned = ProcVmStat::parse_proc_vmstat_line(line)
@@ -851,10 +852,10 @@ impl ProcVmStat {
                     procvmstat.htlb_buddy_alloc_fail = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "cma_alloc_success" => {
-                    procvmstat.cma_alloc_success = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.cma_alloc_success = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "cma_alloc_fail" => {
-                    procvmstat.cma_alloc_fail = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.cma_alloc_fail = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "unevictable_pgs_culled" => {
                     procvmstat.unevictable_pgs_culled = ProcVmStat::parse_proc_vmstat_line(line)
@@ -884,7 +885,7 @@ impl ProcVmStat {
                     procvmstat.thp_fault_fallback = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "thp_fault_fallback_charge" => {
-                    procvmstat.thp_fault_fallback_charge = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_fault_fallback_charge = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_collapse_alloc" => {
                     procvmstat.thp_collapse_alloc = ProcVmStat::parse_proc_vmstat_line(line)
@@ -896,10 +897,10 @@ impl ProcVmStat {
                     procvmstat.thp_file_alloc = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "thp_file_fallback" => {
-                    procvmstat.thp_file_fallback = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_file_fallback = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_file_fallback_charge" => {
-                    procvmstat.thp_file_fallback_charge = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_file_fallback_charge = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_file_mapped" => {
                     procvmstat.thp_file_mapped = ProcVmStat::parse_proc_vmstat_line(line)
@@ -917,13 +918,13 @@ impl ProcVmStat {
                     procvmstat.thp_split_pmd = ProcVmStat::parse_proc_vmstat_line(line)
                 }
                 "thp_scan_exceed_none_pte" => {
-                    procvmstat.thp_scan_exceed_none_pte = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_scan_exceed_none_pte = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_scan_exceed_swap_pte" => {
-                    procvmstat.thp_scan_exceed_swap_pte = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_scan_exceed_swap_pte = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_scan_exceed_share_pte" => {
-                    procvmstat.thp_scan_exceed_share_pte = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.thp_scan_exceed_share_pte = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
                 "thp_zero_page_alloc" => {
                     procvmstat.thp_zero_page_alloc = ProcVmStat::parse_proc_vmstat_line(line)
@@ -947,13 +948,13 @@ impl ProcVmStat {
                 "swap_ra" => procvmstat.swap_ra = ProcVmStat::parse_proc_vmstat_line(line),
                 "swap_ra_hit" => procvmstat.swap_ra_hit = ProcVmStat::parse_proc_vmstat_line(line),
                 "ksm_swpin_copy" => {
-                    procvmstat.ksm_swpin_copy = ProcVmStat::parse_proc_vmstat_line(line)
+                    procvmstat.ksm_swpin_copy = ProcVmStat::parse_proc_vmstat_line_option(line)
                 }
-                "cow_ksm" => procvmstat.cow_ksm = ProcVmStat::parse_proc_vmstat_line(line),
-                "zswpin" => procvmstat.zswpin = ProcVmStat::parse_proc_vmstat_line(line),
-                "zswpout" => procvmstat.zswpout = ProcVmStat::parse_proc_vmstat_line(line),
+                "cow_ksm" => procvmstat.cow_ksm = ProcVmStat::parse_proc_vmstat_line_option(line),
+                "zswpin" => procvmstat.zswpin = ProcVmStat::parse_proc_vmstat_line_option(line),
+                "zswpout" => procvmstat.zswpout = ProcVmStat::parse_proc_vmstat_line_option(line),
                 "nr_unstable" => procvmstat.nr_unstable = ProcVmStat::parse_proc_vmstat_line(line),
-                _ => panic!("Unknown line entry found in vmstat: {}", line),
+                _ => warn!("vmstat: unknown entry found: {}", line),
             }
         }
         procvmstat
@@ -965,6 +966,14 @@ impl ProcVmStat {
             .map(|number| number.parse::<u64>().unwrap())
             .nth(0)
             .unwrap_or(0)
+    }
+    fn parse_proc_vmstat_line_option(proc_vmstat_line: &str) -> Option<u64> {
+        Some(proc_vmstat_line
+            .split_whitespace()
+            .skip(1)
+            .map(|number| number.parse::<u64>().unwrap())
+            .nth(0)
+            .unwrap_or(0))
     }
     pub fn read_proc_vmstat(proc_vmstat_file: &str) -> ProcVmStat {
         let proc_vmstat_output = read_to_string(proc_vmstat_file)
@@ -1168,184 +1177,7 @@ nr_unstable 0";
         let result = ProcVmStat::parse_proc_vmstat_output(proc_vmstat);
         assert_eq!(
             result,
-            ProcVmStat {
-                nr_free_pages: 778263,
-                nr_zone_inactive_anon: 212,
-                nr_zone_active_anon: 21214,
-                nr_zone_inactive_file: 86210,
-                nr_zone_active_file: 85676,
-                nr_zone_unevictable: 0,
-                nr_zone_write_pending: 1,
-                nr_mlock: 0,
-                nr_bounce: 0,
-                nr_zspages: 0,
-                nr_free_cma: 7808,
-                numa_hit: 40773813,
-                numa_miss: 0,
-                numa_foreign: 0,
-                numa_interleave: 1212,
-                numa_local: 40773813,
-                numa_other: 0,
-                nr_inactive_anon: 212,
-                nr_active_anon: 21214,
-                nr_inactive_file: 86210,
-                nr_active_file: 85676,
-                nr_unevictable: 0,
-                nr_slab_reclaimable: 8551,
-                nr_slab_unreclaimable: 8749,
-                nr_isolated_anon: 0,
-                nr_isolated_file: 0,
-                workingset_nodes: 0,
-                workingset_refault_anon: 0,
-                workingset_refault_file: 0,
-                workingset_activate_anon: 0,
-                workingset_activate_file: 0,
-                workingset_restore_anon: 0,
-                workingset_restore_file: 0,
-                workingset_nodereclaim: 0,
-                nr_anon_pages: 21233,
-                nr_mapped: 33359,
-                nr_file_pages: 0,
-                nr_dirty: 1,
-                nr_writeback: 0,
-                nr_writeback_temp: 0,
-                nr_shmem: 194,
-                nr_shmem_hugepages: 0,
-                nr_shmem_pmdmapped: 0,
-                nr_file_hugepages: 0,
-                nr_file_pmdmapped: 0,
-                nr_anon_transparent_hugepages: 0,
-                nr_vmscan_write: 0,
-                nr_vmscan_immediate_reclaim: 0,
-                nr_dirtied: 66050,
-                nr_written: 62014,
-                nr_throttled_written: 0,
-                nr_kernel_misc_reclaimable: 0,
-                nr_foll_pin_acquired: 0,
-                nr_foll_pin_released: 0,
-                nr_kernel_stack: 2768,
-                nr_shadow_call_stack: 712,
-                nr_page_table_pages: 580,
-                nr_sec_page_table_pages: 0,
-                nr_swapcached: 0,
-                pgpromote_success: 0,
-                pgpromote_candidate: 0,
-                nr_dirty_threshold: 186274,
-                nr_dirty_background_threshold: 93023,
-                pgpgin: 569048,
-                pgpgout: 264157,
-                pswpin: 0,
-                pswpout: 0,
-                pgalloc_dma: 0,
-                pgalloc_dma32: 0,
-                pgalloc_normal: 42962188,
-                pgalloc_movable: 0,
-                pgalloc_device: 0,
-                allocstall_dma: 0,
-                allocstall_dma32: 0,
-                allocstall_normal: 0,
-                allocstall_movable: 0,
-                allocstall_device: 0,
-                pgskip_dma: 0,
-                pgskip_dma32: 0,
-                pgskip_normal: 0,
-                pgskip_movable: 0,
-                pgskip_device: 0,
-                pgfree: 43741863,
-                pgactivate: 0,
-                pgdeactivate: 0,
-                pglazyfree: 0,
-                pglazyfreed: 0,
-                pgfault: 55051790,
-                pgmajfault: 2851,
-                pgrefill: 0,
-                pgreuse: 1854584,
-                pgsteal_kswapd: 0,
-                pgsteal_direct: 0,
-                pgsteal_khugepaged: 0,
-                pgdemote_kswapd: 0,
-                pgdemote_direct: 0,
-                pgdemote_khugepaged: 0,
-                pgscan_kswapd: 0,
-                pgscan_direct: 0,
-                pgscan_khugepaged: 0,
-                pgscan_direct_throttle: 0,
-                pgscan_anon: 0,
-                pgscan_file: 0,
-                pgsteal_anon: 0,
-                pgsteal_file: 0,
-                zone_reclaim_failed: 0,
-                pginodesteal: 0,
-                slabs_scanned: 0,
-                kswapd_inodesteal: 0,
-                kswapd_low_wmark_hit_quickly: 0,
-                kswapd_high_wmark_hit_quickly: 0,
-                pageoutrun: 0,
-                pgrotated: 6,
-                drop_pagecache: 0,
-                drop_slab: 0,
-                oom_kill: 0,
-                numa_pte_updates: 0,
-                numa_huge_pte_updates: 0,
-                numa_hint_faults: 0,
-                numa_hint_faults_local: 0,
-                numa_pages_migrated: 0,
-                pgmigrate_success: 0,
-                pgmigrate_fail: 0,
-                thp_migration_success: 0,
-                thp_migration_fail: 0,
-                thp_migration_split: 0,
-                compact_migrate_scanned: 0,
-                compact_free_scanned: 0,
-                compact_isolated: 896,
-                compact_stall: 0,
-                compact_fail: 0,
-                compact_success: 0,
-                compact_daemon_wake: 0,
-                compact_daemon_migrate_scanned: 0,
-                compact_daemon_free_scanned: 0,
-                htlb_buddy_alloc_success: 0,
-                htlb_buddy_alloc_fail: 0,
-                cma_alloc_success: 3,
-                cma_alloc_fail: 0,
-                unevictable_pgs_culled: 0,
-                unevictable_pgs_scanned: 0,
-                unevictable_pgs_rescued: 0,
-                unevictable_pgs_mlocked: 0,
-                unevictable_pgs_munlocked: 0,
-                unevictable_pgs_cleared: 0,
-                unevictable_pgs_stranded: 0,
-                thp_fault_alloc: 0,
-                thp_fault_fallback: 0,
-                thp_fault_fallback_charge: 0,
-                thp_collapse_alloc: 0,
-                thp_collapse_alloc_failed: 0,
-                thp_file_alloc: 0,
-                thp_file_fallback: 0,
-                thp_file_fallback_charge: 0,
-                thp_file_mapped: 0,
-                thp_split_page: 0,
-                thp_split_page_failed: 0,
-                thp_deferred_split_page: 0,
-                thp_split_pmd: 0,
-                thp_scan_exceed_none_pte: 0,
-                thp_scan_exceed_swap_pte: 0,
-                thp_scan_exceed_share_pte: 0,
-                thp_zero_page_alloc: 0,
-                thp_zero_page_alloc_failed: 0,
-                thp_swpout: 0,
-                thp_swpout_fallback: 0,
-                balloon_inflate: 0,
-                balloon_deflate: 0,
-                balloon_migrate: 0,
-                swap_ra: 0,
-                swap_ra_hit: 0,
-                ksm_swpin_copy: 0,
-                cow_ksm: 0,
-                zswpin: 0,
-                zswpout: 0,
-                nr_unstable: 0,
-            }
+            ProcVmStat { nr_free_pages: 778263, nr_zone_inactive_anon: 212, nr_zone_active_anon: 21214, nr_zone_inactive_file: 86210, nr_zone_active_file: 85676, nr_zone_unevictable: 0, nr_zone_write_pending: 1, nr_mlock: 0, nr_bounce: 0, nr_zspages: 0 , nr_free_cma: 7808, numa_hit: 40773813, numa_miss: 0, numa_foreign: 0, numa_interleave: 1212, numa_local: 40773813, numa_other: 0, nr_inactive_anon: 212, nr_active_anon: 21214, nr_inactive_file: 86210, nr_active_file: 85676, nr_unevictable: 0, nr_slab_reclaimable: 8551, nr_slab_unreclaimable: 8749, nr_isolated_anon: 0, nr_isolated_file: 0, workingset_nodes: Some(0), workingset_refault_anon: Some(0), workingset_refault_file: Some(0), workingset_activate_anon: Some(0), workingset_activate_file: Some(0), workingset_restore_anon: Some(0), workingset_restore_file: Some(0), workingset_nodereclaim: 0, nr_anon_pages: 21233, nr_mapped: 33359, nr_file_pages: 0, nr_dirty: 1, nr_writeback: 0, nr_writeback_temp: 0, nr_shmem: 194, nr_shmem_hugepages: 0, nr_shmem_pmdmapped: 0, nr_file_hugepages: Some(0), nr_file_pmdmapped: Some(0), nr_anon_transparent_hugepages: 0, nr_vmscan_write: 0, nr_vmscan_immediate_reclaim: 0, nr_dirtied: 66050, nr_written: 62014, nr_throttled_written: Some(0), nr_kernel_misc_reclaimable: Some(0), nr_foll_pin_acquired: Some(0), nr_foll_pin_released: Some(0), nr_kernel_stack: 2768, nr_shadow_call_stack: Some(712), nr_page_table_pages: 580, nr_sec_page_table_pages: Some(0), nr_swapcached: Some(0), pgpromote_success: Some(0), pgpromote_candidate: Some(0), nr_dirty_threshold: 186274, nr_dirty_background_threshold: 93023, pgpgin: 569048, pgpgout: 264157, pswpin: 0, pswpout: 0, pgalloc_dma: 0, pgalloc_dma32: 0, pgalloc_normal: 42962188, pgalloc_movable: 0, pgalloc_device: Some(0), allocstall_dma: 0, allocstall_dma32: 0, allocstall_normal: 0, allocstall_movable: 0, allocstall_device: Some(0), pgskip_dma: 0, pgskip_dma32: 0, pgskip_normal: 0, pgskip_movable: 0, pgskip_device: Some(0), pgfree: 43741863, pgactivate: 0, pgdeactivate: 0, pglazyfree: 0, pglazyfreed: 0, pgfault: 55051790, pgmajfault: 2851, pgrefill: 0, pgreuse: Some(1854584), pgsteal_kswapd: 0, pgsteal_direct: 0, pgsteal_khugepaged: Some(0), pgdemote_kswapd: Some(0), pgdemote_direct: Some (0), pgdemote_khugepaged: Some(0), pgscan_kswapd: 0, pgscan_direct: 0, pgscan_khugepaged: Some(0), pgscan_direct_throttle: 0, pgscan_anon: Some(0), pgscan_file: Some(0), pgsteal_anon: Some(0), pgsteal_file: Some(0), zone_reclaim_failed: 0, pginodesteal: 0, slabs_scanned: Some(0), kswapd_inodesteal: 0, kswapd_low_wmark_hit_quickly: 0, kswapd_high_wmark_hit_quickly: 0, pageoutrun: 0, pgrotated: 6, drop_pagecache: 0, drop_slab: 0, oom_kill: 0, numa_pte_updates: 0, numa_huge_pte_updates: 0, numa_hint_faults: 0, numa_hint_faults_local: 0, numa_pages_migrated: 0, pgmigrate_success: 0, pgmigrate_fail: 0, thp_migration_success: Some(0), thp_migration_fail: Some(0), thp_migration_split: Some(0), compact_migrate_scanned: 0, compact_free_scanned : 0, compact_isolated: 896, compact_stall: 0, compact_fail: 0, compact_success: 0, compact_daemon_wake: 0, compact_daemon_migrate_scanned: 0, compact_daemon_free_scanned: 0, htlb_buddy_alloc_success: 0, htlb_buddy_alloc_fail: 0, cma_alloc_success: Some(3), cma_alloc_fail: Some(0), unevictable_pgs_culled: 0, unevictable_pgs_scanned: 0, unevictable_pgs_rescued: 0, unevictable_pgs_mlocked: 0, unevictable_pgs_munlocked: 0, unevictable_pgs_cleared: 0, unevictable_pgs_stranded: 0, thp_fault_alloc: 0, thp_fault_fallback: 0, thp_fault_fallback_charge: Some(0), thp_collapse_alloc: 0, thp_collapse_alloc_failed: 0, thp_file_alloc: 0, thp_file_fallback: Some(0), thp_file_fallback_charge: Some(0), thp_file_mapped: 0, thp_split_page: 0, thp_split_page_failed: 0, thp_deferred_split_page: 0, thp_split_pmd: 0, thp_scan_exceed_none_pte: Some(0), thp_scan_exceed_swap_pte: Some(0), thp_scan_exceed_share_pte: Some(0), thp_zero_page_alloc: 0, thp_zero_page_alloc_failed: 0, thp_swpout: 0, thp_swpout_fallback: 0, balloon_inflate: 0, balloon_deflate: 0, balloon_migrate: 0, swap_ra: 0, swap_ra_hit: 0, ksm_swpin_copy: Some(0), cow_ksm: Some(0), zswpin: Some(0), zswpout: Some(0), nr_unstable: 0 }
         );
     }
 
@@ -1545,184 +1377,7 @@ nr_unstable 0";
 
         assert_eq!(
             result,
-            ProcVmStat {
-                nr_free_pages: 778263,
-                nr_zone_inactive_anon: 212,
-                nr_zone_active_anon: 21214,
-                nr_zone_inactive_file: 86210,
-                nr_zone_active_file: 85676,
-                nr_zone_unevictable: 0,
-                nr_zone_write_pending: 1,
-                nr_mlock: 0,
-                nr_bounce: 0,
-                nr_zspages: 0,
-                nr_free_cma: 7808,
-                numa_hit: 40773813,
-                numa_miss: 0,
-                numa_foreign: 0,
-                numa_interleave: 1212,
-                numa_local: 40773813,
-                numa_other: 0,
-                nr_inactive_anon: 212,
-                nr_active_anon: 21214,
-                nr_inactive_file: 86210,
-                nr_active_file: 85676,
-                nr_unevictable: 0,
-                nr_slab_reclaimable: 8551,
-                nr_slab_unreclaimable: 8749,
-                nr_isolated_anon: 0,
-                nr_isolated_file: 0,
-                workingset_nodes: 0,
-                workingset_refault_anon: 0,
-                workingset_refault_file: 0,
-                workingset_activate_anon: 0,
-                workingset_activate_file: 0,
-                workingset_restore_anon: 0,
-                workingset_restore_file: 0,
-                workingset_nodereclaim: 0,
-                nr_anon_pages: 21233,
-                nr_mapped: 33359,
-                nr_file_pages: 0,
-                nr_dirty: 1,
-                nr_writeback: 0,
-                nr_writeback_temp: 0,
-                nr_shmem: 194,
-                nr_shmem_hugepages: 0,
-                nr_shmem_pmdmapped: 0,
-                nr_file_hugepages: 0,
-                nr_file_pmdmapped: 0,
-                nr_anon_transparent_hugepages: 0,
-                nr_vmscan_write: 0,
-                nr_vmscan_immediate_reclaim: 0,
-                nr_dirtied: 66050,
-                nr_written: 62014,
-                nr_throttled_written: 0,
-                nr_kernel_misc_reclaimable: 0,
-                nr_foll_pin_acquired: 0,
-                nr_foll_pin_released: 0,
-                nr_kernel_stack: 2768,
-                nr_shadow_call_stack: 712,
-                nr_page_table_pages: 580,
-                nr_sec_page_table_pages: 0,
-                nr_swapcached: 0,
-                pgpromote_success: 0,
-                pgpromote_candidate: 0,
-                nr_dirty_threshold: 186274,
-                nr_dirty_background_threshold: 93023,
-                pgpgin: 569048,
-                pgpgout: 264157,
-                pswpin: 0,
-                pswpout: 0,
-                pgalloc_dma: 0,
-                pgalloc_dma32: 0,
-                pgalloc_normal: 42962188,
-                pgalloc_movable: 0,
-                pgalloc_device: 0,
-                allocstall_dma: 0,
-                allocstall_dma32: 0,
-                allocstall_normal: 0,
-                allocstall_movable: 0,
-                allocstall_device: 0,
-                pgskip_dma: 0,
-                pgskip_dma32: 0,
-                pgskip_normal: 0,
-                pgskip_movable: 0,
-                pgskip_device: 0,
-                pgfree: 43741863,
-                pgactivate: 0,
-                pgdeactivate: 0,
-                pglazyfree: 0,
-                pglazyfreed: 0,
-                pgfault: 55051790,
-                pgmajfault: 2851,
-                pgrefill: 0,
-                pgreuse: 1854584,
-                pgsteal_kswapd: 0,
-                pgsteal_direct: 0,
-                pgsteal_khugepaged: 0,
-                pgdemote_kswapd: 0,
-                pgdemote_direct: 0,
-                pgdemote_khugepaged: 0,
-                pgscan_kswapd: 0,
-                pgscan_direct: 0,
-                pgscan_khugepaged: 0,
-                pgscan_direct_throttle: 0,
-                pgscan_anon: 0,
-                pgscan_file: 0,
-                pgsteal_anon: 0,
-                pgsteal_file: 0,
-                zone_reclaim_failed: 0,
-                pginodesteal: 0,
-                slabs_scanned: 0,
-                kswapd_inodesteal: 0,
-                kswapd_low_wmark_hit_quickly: 0,
-                kswapd_high_wmark_hit_quickly: 0,
-                pageoutrun: 0,
-                pgrotated: 6,
-                drop_pagecache: 0,
-                drop_slab: 0,
-                oom_kill: 0,
-                numa_pte_updates: 0,
-                numa_huge_pte_updates: 0,
-                numa_hint_faults: 0,
-                numa_hint_faults_local: 0,
-                numa_pages_migrated: 0,
-                pgmigrate_success: 0,
-                pgmigrate_fail: 0,
-                thp_migration_success: 0,
-                thp_migration_fail: 0,
-                thp_migration_split: 0,
-                compact_migrate_scanned: 0,
-                compact_free_scanned: 0,
-                compact_isolated: 896,
-                compact_stall: 0,
-                compact_fail: 0,
-                compact_success: 0,
-                compact_daemon_wake: 0,
-                compact_daemon_migrate_scanned: 0,
-                compact_daemon_free_scanned: 0,
-                htlb_buddy_alloc_success: 0,
-                htlb_buddy_alloc_fail: 0,
-                cma_alloc_success: 3,
-                cma_alloc_fail: 0,
-                unevictable_pgs_culled: 0,
-                unevictable_pgs_scanned: 0,
-                unevictable_pgs_rescued: 0,
-                unevictable_pgs_mlocked: 0,
-                unevictable_pgs_munlocked: 0,
-                unevictable_pgs_cleared: 0,
-                unevictable_pgs_stranded: 0,
-                thp_fault_alloc: 0,
-                thp_fault_fallback: 0,
-                thp_fault_fallback_charge: 0,
-                thp_collapse_alloc: 0,
-                thp_collapse_alloc_failed: 0,
-                thp_file_alloc: 0,
-                thp_file_fallback: 0,
-                thp_file_fallback_charge: 0,
-                thp_file_mapped: 0,
-                thp_split_page: 0,
-                thp_split_page_failed: 0,
-                thp_deferred_split_page: 0,
-                thp_split_pmd: 0,
-                thp_scan_exceed_none_pte: 0,
-                thp_scan_exceed_swap_pte: 0,
-                thp_scan_exceed_share_pte: 0,
-                thp_zero_page_alloc: 0,
-                thp_zero_page_alloc_failed: 0,
-                thp_swpout: 0,
-                thp_swpout_fallback: 0,
-                balloon_inflate: 0,
-                balloon_deflate: 0,
-                balloon_migrate: 0,
-                swap_ra: 0,
-                swap_ra_hit: 0,
-                ksm_swpin_copy: 0,
-                cow_ksm: 0,
-                zswpin: 0,
-                zswpout: 0,
-                nr_unstable: 0,
-            }
+            ProcVmStat { nr_free_pages: 778263, nr_zone_inactive_anon: 212, nr_zone_active_anon: 21214, nr_zone_inactive_file: 86210, nr_zone_active_file: 85676, nr_zone_unevictable: 0, nr_zone_write_pending: 1, nr_mlock: 0, nr_bounce: 0, nr_zspages: 0 , nr_free_cma: 7808, numa_hit: 40773813, numa_miss: 0, numa_foreign: 0, numa_interleave: 1212, numa_local: 40773813, numa_other: 0, nr_inactive_anon: 212, nr_active_anon: 21214, nr_inactive_file: 86210, nr_active_file: 85676, nr_unevictable: 0, nr_slab_reclaimable: 8551, nr_slab_unreclaimable: 8749, nr_isolated_anon: 0, nr_isolated_file: 0, workingset_nodes: Some(0), workingset_refault_anon: Some(0), workingset_refault_file: Some(0), workingset_activate_anon: Some(0), workingset_activate_file: Some(0), workingset_restore_anon: Some(0), workingset_restore_file: Some(0), workingset_nodereclaim: 0, nr_anon_pages: 21233, nr_mapped: 33359, nr_file_pages: 0, nr_dirty: 1, nr_writeback: 0, nr_writeback_temp: 0, nr_shmem: 194, nr_shmem_hugepages: 0, nr_shmem_pmdmapped: 0, nr_file_hugepages: Some(0), nr_file_pmdmapped: Some(0), nr_anon_transparent_hugepages: 0, nr_vmscan_write: 0, nr_vmscan_immediate_reclaim: 0, nr_dirtied: 66050, nr_written: 62014, nr_throttled_written: Some(0), nr_kernel_misc_reclaimable: Some(0), nr_foll_pin_acquired: Some(0), nr_foll_pin_released: Some(0), nr_kernel_stack: 2768, nr_shadow_call_stack: Some(712), nr_page_table_pages: 580, nr_sec_page_table_pages: Some(0), nr_swapcached: Some(0), pgpromote_success: Some(0), pgpromote_candidate: Some(0), nr_dirty_threshold: 186274, nr_dirty_background_threshold: 93023, pgpgin: 569048, pgpgout: 264157, pswpin: 0, pswpout: 0, pgalloc_dma: 0, pgalloc_dma32: 0, pgalloc_normal: 42962188, pgalloc_movable: 0, pgalloc_device: Some(0), allocstall_dma: 0, allocstall_dma32: 0, allocstall_normal: 0, allocstall_movable: 0, allocstall_device: Some(0), pgskip_dma: 0, pgskip_dma32: 0, pgskip_normal: 0, pgskip_movable: 0, pgskip_device: Some(0), pgfree: 43741863, pgactivate: 0, pgdeactivate: 0, pglazyfree: 0, pglazyfreed: 0, pgfault: 55051790, pgmajfault: 2851, pgrefill: 0, pgreuse: Some(1854584), pgsteal_kswapd: 0, pgsteal_direct: 0, pgsteal_khugepaged: Some(0), pgdemote_kswapd: Some(0), pgdemote_direct: Some (0), pgdemote_khugepaged: Some(0), pgscan_kswapd: 0, pgscan_direct: 0, pgscan_khugepaged: Some(0), pgscan_direct_throttle: 0, pgscan_anon: Some(0), pgscan_file: Some(0), pgsteal_anon: Some(0), pgsteal_file: Some(0), zone_reclaim_failed: 0, pginodesteal: 0, slabs_scanned: Some(0), kswapd_inodesteal: 0, kswapd_low_wmark_hit_quickly: 0, kswapd_high_wmark_hit_quickly: 0, pageoutrun: 0, pgrotated: 6, drop_pagecache: 0, drop_slab: 0, oom_kill: 0, numa_pte_updates: 0, numa_huge_pte_updates: 0, numa_hint_faults: 0, numa_hint_faults_local: 0, numa_pages_migrated: 0, pgmigrate_success: 0, pgmigrate_fail: 0, thp_migration_success: Some(0), thp_migration_fail: Some(0), thp_migration_split: Some(0), compact_migrate_scanned: 0, compact_free_scanned : 0, compact_isolated: 896, compact_stall: 0, compact_fail: 0, compact_success: 0, compact_daemon_wake: 0, compact_daemon_migrate_scanned: 0, compact_daemon_free_scanned: 0, htlb_buddy_alloc_success: 0, htlb_buddy_alloc_fail: 0, cma_alloc_success: Some(3), cma_alloc_fail: Some(0), unevictable_pgs_culled: 0, unevictable_pgs_scanned: 0, unevictable_pgs_rescued: 0, unevictable_pgs_mlocked: 0, unevictable_pgs_munlocked: 0, unevictable_pgs_cleared: 0, unevictable_pgs_stranded: 0, thp_fault_alloc: 0, thp_fault_fallback: 0, thp_fault_fallback_charge: Some(0), thp_collapse_alloc: 0, thp_collapse_alloc_failed: 0, thp_file_alloc: 0, thp_file_fallback: Some(0), thp_file_fallback_charge: Some(0), thp_file_mapped: 0, thp_split_page: 0, thp_split_page_failed: 0, thp_deferred_split_page: 0, thp_split_pmd: 0, thp_scan_exceed_none_pte: Some(0), thp_scan_exceed_swap_pte: Some(0), thp_scan_exceed_share_pte: Some(0), thp_zero_page_alloc: 0, thp_zero_page_alloc_failed: 0, thp_swpout: 0, thp_swpout_fallback: 0, balloon_inflate: 0, balloon_deflate: 0, balloon_migrate: 0, swap_ra: 0, swap_ra_hit: 0, ksm_swpin_copy: Some(0), cow_ksm: Some(0), zswpin: Some(0), zswpout: Some(0), nr_unstable: 0 }
         );
     }
 }

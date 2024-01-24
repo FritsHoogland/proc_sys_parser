@@ -40,7 +40,7 @@ let proc_loadavg = Builder::new().file_name("/myproc/loadavg").read();
 use std::fs::read_to_string;
 
 /// Struct for holding `/proc/loadavg` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcLoadavg {
     pub load_1: f64,
     pub load_5: f64,
@@ -89,21 +89,9 @@ pub fn read() -> ProcLoadavg
    Builder::new().read()
 }
 
-impl Default for ProcLoadavg {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 impl ProcLoadavg {
     pub fn new() -> ProcLoadavg {
-        ProcLoadavg {
-            load_1: 0.0,
-            load_5: 0.0,
-            load_15: 0.0,
-            current_runnable: 0,
-            total: 0,
-            last_pid: 0,
-        }
+        ProcLoadavg::default()
     }
     pub fn parse_proc_loadavg(
         proc_loadavg: &str,

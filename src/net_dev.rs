@@ -157,7 +157,7 @@ impl ProcNetDev {
     }
     pub fn read_proc_net_dev(proc_net_dev_file: &str) -> ProcNetDev
     {
-        let proc_net_dev_output = read_to_string(proc_net_dev_file).unwrap_or_else(|error|panic!("Error {} reading file: {}", error, proc_net_dev_file));
+        let proc_net_dev_output = read_to_string(proc_net_dev_file).unwrap_or_else(|error| panic!("Error {} reading file: {}", error, proc_net_dev_file));
         ProcNetDev::parse_proc_net_dev(&proc_net_dev_output)
     }
 }

@@ -65,6 +65,7 @@ The ProcPressure.psi entry is set to None.
 
 */
 use std::fs::read_to_string;
+use log::warn;
 
 
 /// Struct for holding `/proc/pressure` statistics
@@ -264,7 +265,7 @@ impl ProcPressure {
                                 &_ => panic!("Unknown entry in full: {}", file),
                             }
                         },
-                        Some(&_) => panic!("Unknown entry in pressure: {}", line),
+                        Some(&_) => warn!("pressure: unknown entry found: {}", line),
                         None => {},
                     }
                 }
