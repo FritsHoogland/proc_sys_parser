@@ -212,13 +212,10 @@ impl ProcPressure {
     }
     fn parse_pressure_entity(file: &str, proc_pressure_path: &str, psi: &mut Psi) -> Option<usize>
     {
-        match read_to_string(format!("{}/{}", &proc_pressure_path, file))
-        {
+        match read_to_string(format!("{}/{}", &proc_pressure_path, file)) {
             Ok(psi_contents)  => {
-                for line in psi_contents.lines()
-                {
-                    match line.split_whitespace().next()
-                    {
+                for line in psi_contents.lines() {
+                    match line.split_whitespace().next() {
                         Some("some") => {
                             match file {
                                 "cpu" => {
@@ -239,7 +236,7 @@ impl ProcPressure {
                                     psi.memory_some_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
                                     psi.memory_some_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
                                 },
-                                &_ => panic!("Unknown entry in some: {}", file),
+                                &_ => warn!("Unknown entry in some: {}, {}", file, line),
                             }
                         },
                         Some("full") => {
@@ -262,10 +259,10 @@ impl ProcPressure {
                                     psi.memory_full_avg300 = line.split_whitespace().nth(3).unwrap().split('=').nth(1).unwrap().parse::<f64>().unwrap();
                                     psi.memory_full_total = line.split_whitespace().nth(4).unwrap().split('=').nth(1).unwrap().parse::<u64>().unwrap();
                                 },
-                                &_ => panic!("Unknown entry in full: {}", file),
+                                &_ => warn!("Unknown entry in full: {}, {}", file, line),
                             }
                         },
-                        Some(&_) => warn!("pressure: unknown entry found: {}", line),
+                        Some(&_) => warn!("Unknown entry found: {}", line),
                         None => {},
                     }
                 }
