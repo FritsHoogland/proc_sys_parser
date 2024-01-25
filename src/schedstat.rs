@@ -129,7 +129,15 @@ pub struct ProcSchedStat {
     pub version: u64,
     pub timestamp: u64,
     pub cpu: Vec<Vec<u64>>,
-    pub domain: Vec<Vec<u64>>,
+    pub domain: Vec<Domain>,
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub struct Domain {
+    pub cpu_nr: u64,
+    pub domain_nr: u64,
+    pub cpu_masks: Vec<u64>,
+    pub statistics: Vec<u64>,
 }
 
 impl ProcSchedStat {
@@ -146,10 +154,9 @@ impl ProcSchedStat {
     ) -> ProcSchedStat
     {
         let mut schedstat = ProcSchedStat::new();
-        for line in proc_schedstat.lines()
-        {
-            match line
-            {
+        let mut current_cpu = &0;
+        for line in proc_schedstat.lines() {
+            match line {
                 line if line.starts_with("version ") => {
                     schedstat.version = ProcSchedStat::generate_number_unsigned(line);
                 },
@@ -158,9 +165,10 @@ impl ProcSchedStat {
                 },
                 line if line.starts_with("cpu") => {
                     schedstat.cpu.push(ProcSchedStat::generate_number_vector(line));
+                    current_cpu = schedstat.cpu.last().unwrap().iter().next().unwrap();
                 },
                 line if line.starts_with("domain") => {
-                    schedstat.domain.push(ProcSchedStat::generate_number_vector(line));
+                    schedstat.domain.push(ProcSchedStat::generate_domain_struct(line, current_cpu));
                 },
                 _  => warn!("schedstat: unknown entry found: {}", line),
             }
@@ -188,6 +196,37 @@ impl ProcSchedStat {
         };
         proc_schedstat_line
     }
+    fn generate_domain_struct(proc_schedstat_line: &str, current_cpu: &u64) -> Domain {
+        
+        let domain_nr = proc_schedstat_line
+            .split_whitespace()
+            .map(|line| line.strip_prefix("domain").unwrap_or_default())
+            .take(1)
+            .map(|cpu_nr| cpu_nr.parse::<u64>().unwrap())
+            .next()
+            .unwrap();
+
+        let cpu_masks: Vec<u64> = proc_schedstat_line
+            .split_whitespace()
+            .nth(1)
+            .unwrap()
+            .split(',')
+            .map(|cpu_mask| u64::from_str_radix(cpu_mask, 16).unwrap())
+            .collect();
+
+        let statistics: Vec<u64> = proc_schedstat_line
+            .split_whitespace()
+            .skip(2)
+            .map(|statistics| statistics.parse::<u64>().unwrap())
+            .collect();
+
+        Domain {
+            cpu_nr: current_cpu.clone(),
+            domain_nr,
+            cpu_masks,
+            statistics,
+        }
+    }
     fn generate_number_unsigned(proc_stat_line: &str) -> u64
     {
         proc_stat_line.split_whitespace()
@@ -205,7 +244,9 @@ impl ProcSchedStat {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{write, remove_file};
+    use std::fs::{write, remove_dir_all, create_dir_all};
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
     use super::*;
 
     // cpu times are in jiffies, which are clock ticks.
@@ -267,24 +308,17 @@ domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
                    vec![5, 0, 0, 0, 0, 0, 0, 444708323872, 42862371788, 3900565],
             ],
             domain: vec![
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-                vec![],
-                vec![],
-                vec![],
-                vec![],
-                vec![],
-                vec![],
-            ]
+                Domain { cpu_nr: 0, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 1, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 2, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 3, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 4, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 5, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            ] 
         });
     }
     #[test]
-    fn create_proc_schedstat_file_and_read()
-    {
+    fn create_proc_schedstat_file_and_read() {
         let proc_schedstat = "version 15
 timestamp 4318961659
 cpu0 0 0 0 0 0 0 457571901633 48594074614 4348645
@@ -299,9 +333,15 @@ cpu4 0 0 0 0 0 0 438666554521 43706845278 3787400
 domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 cpu5 0 0 0 0 0 0 444708323872 42862371788 3900565
 domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
-        write("/tmp/_test_proc_schedstat", proc_schedstat).expect("Error writing to /tmp/_test_proc_schedstat");
-        let result = Builder::new().file_name("/tmp/_test_proc_schedstat").read();
-        remove_file("/tmp/_test_proc_schedstat").unwrap();
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        create_dir_all(format!("{}/proc", test_path)).expect("Error creating mock directory.");
+
+        write(format!("{}/schedstat", test_path), proc_schedstat).expect(format!("Error writing to {}/schedstat", test_path).as_str());
+
+        let result = Builder::new().file_name(format!("{}/schedstat", test_path).as_str()).read();
+        remove_dir_all(test_path).unwrap();
+
         assert_eq!(result, ProcSchedStat { version: 15,
             timestamp: 4318961659,
             cpu: vec![
@@ -313,19 +353,81 @@ domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
                 vec![5, 0, 0, 0, 0, 0, 0, 444708323872, 42862371788, 3900565],
             ],
             domain: vec![
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                //vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-                vec![],
-                vec![],
-                vec![],
-                vec![],
-                vec![],
-                vec![],
-            ]
+                Domain { cpu_nr: 0, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 1, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 2, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 3, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 4, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, 
+                Domain { cpu_nr: 5, domain_nr: 0, cpu_masks: vec![63], statistics: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+            ] 
         });
     }
+    #[test]
+    fn create_proc_schedstat_file_and_read_multiple_domains() {
+        let proc_schedstat = "version 15
+timestamp 7452455604
+cpu0 0 0 0 0 0 0 1400897766846392 136499688631908 38913706186
+domain0 00000000,00000001,00000000,00000001 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+domain1 00000000,ffffffff,00000000,ffffffff 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+domain2 ffffffff,ffffffff,ffffffff,ffffffff 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+cpu127 0 0 0 0 0 0 932015010103181 156376242256299 10212355591
+domain0 80000000,00000000,80000000,00000000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+domain1 ffffffff,00000000,ffffffff,00000000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+domain2 ffffffff,ffffffff,ffffffff,ffffffff 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        create_dir_all(format!("{}/proc", test_path)).expect("Error creating mock directory.");
+
+        write(format!("{}/schedstat", test_path), proc_schedstat).expect(format!("Error writing to {}/schedstat", test_path).as_str());
+
+        let result = Builder::new().file_name(format!("{}/schedstat", test_path).as_str()).read();
+        remove_dir_all(test_path).unwrap();
+
+        assert_eq!(result, ProcSchedStat { version: 15, 
+            timestamp: 7452455604, 
+            cpu: vec![
+                vec![0, 0, 0, 0, 0, 0, 0, 1400897766846392, 136499688631908, 38913706186], 
+                vec![127, 0, 0, 0, 0, 0, 0, 932015010103181, 156376242256299, 10212355591]
+            ],
+            domain: vec![
+                Domain {
+                    cpu_nr: 0,
+                    domain_nr: 0,
+                    cpu_masks: vec![ 0, 1, 0, 1, ],
+                    statistics: vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+                },
+                Domain {
+                    cpu_nr: 0,
+                    domain_nr: 1,
+                    cpu_masks: vec![ 0, 4294967295, 0, 4294967295, ],
+                    statistics: vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+                },
+                Domain {
+                    cpu_nr: 0,
+                    domain_nr: 2,
+                    cpu_masks: vec![ 4294967295, 4294967295, 4294967295, 4294967295, ],
+                    statistics: vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ], 
+                },
+                Domain {
+                    cpu_nr: 127,
+                    domain_nr: 0,
+                    cpu_masks: vec![ 2147483648, 0, 2147483648,0 ],
+                    statistics: vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+                },
+                Domain {
+                    cpu_nr: 127,
+                    domain_nr: 1,
+                    cpu_masks: vec![ 4294967295, 0, 4294967295, 0, ],
+                    statistics: vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+                },
+                Domain {
+                    cpu_nr: 127,
+                    domain_nr: 2,
+                    cpu_masks: vec![ 4294967295, 4294967295, 4294967295, 4294967295, ],
+                    statistics: vec![ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ],
+                },
+            ],
+        }
+        );
+   }
 }
