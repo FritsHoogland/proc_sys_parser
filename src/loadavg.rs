@@ -51,34 +51,35 @@ pub struct ProcLoadavg {
 }
 
 /// Builder pattern for [`ProcLoadavg`]
-pub struct Builder
-{
-    pub proc_loadavg_file: String
-}
-
-impl Default for Builder
-{
-    fn default() -> Self
-    {
-        Self::new()
-    }
+#[derive(Default)]
+pub struct Builder {
+    pub proc_path: String,
+    pub proc_file: String,
 }
 
 impl Builder
 {
     pub fn new() -> Builder
     {
-        Builder { proc_loadavg_file: "/proc/loadavg".to_string() }
+        Builder { 
+            proc_path: "/proc".to_string(),
+            proc_file: "loadavg".to_string(),
+        }
     }
 
-    pub fn file_name(mut self, proc_loadavg_file: &str) -> Builder
+    pub fn path(mut self, proc_path: &str) -> Builder
     {
-        self.proc_loadavg_file = proc_loadavg_file.to_string();
+        self.proc_path = proc_path.to_string();
+        self
+    }
+    pub fn file(mut self, proc_file: &str) -> Builder
+    {
+        self.proc_file = proc_file.to_string();
         self
     }
     pub fn read(self) -> ProcLoadavg
     {
-        ProcLoadavg::read_proc_loadavg(&self.proc_loadavg_file)
+        ProcLoadavg::read_proc_loadavg(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -139,7 +140,7 @@ mod tests {
         create_dir_all(format!("{}", test_path)).expect("Error creating mock directory.");
 
         write(format!("{}/loadavg", test_path), proc_loadavg).expect(format!("Error writing to {}/loadavg", test_path).as_str());
-        let result = Builder::new().file_name(format!("{}/loadavg", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 

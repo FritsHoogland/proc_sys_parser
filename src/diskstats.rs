@@ -65,40 +65,36 @@ let proc_diskstats = Builder::new().file_name("/myproc/diskstats").read();
 use std::fs::read_to_string;
 
 /// Struct for holding `/proc/diskstats` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcDiskStats {
     pub disk_stats: Vec<DiskStats>
 }
 
 /// Builder pattern for [`ProcDiskStats`]
-pub struct Builder
-{
-    pub proc_diskstats_file: String
+#[derive(Default)]
+pub struct Builder {
+    pub proc_path : String,
+    pub proc_file : String,
 }
 
-impl Default for Builder
-{
-    fn default() -> Self
-    {
-        Self::new()
-    }
-}
-
-impl Builder
-{
-    pub fn new() -> Builder
-    {
-        Builder { proc_diskstats_file: "/proc/diskstats".to_string() }
+impl Builder {
+    pub fn new() -> Builder {
+        Builder { 
+            proc_path: "/proc".to_string(),
+            proc_file: "diskstats".to_string(),
+        }
     }
 
-    pub fn file_name(mut self, proc_diskstats_file: &str) -> Builder
-    {
-        self.proc_diskstats_file = proc_diskstats_file.to_string();
+    pub fn path(mut self, proc_path: &str) -> Builder {
+        self.proc_path = proc_path.to_string();
         self
     }
-    pub fn read(self) -> ProcDiskStats
-    {
-        ProcDiskStats::read_proc_diskstats(&self.proc_diskstats_file)
+    pub fn file(mut self, proc_file: &str) -> Builder {
+        self.proc_file = proc_file.to_string();
+        self
+    }
+    pub fn read(self) -> ProcDiskStats {
+        ProcDiskStats::read_proc_diskstats(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -108,15 +104,9 @@ pub fn read() -> ProcDiskStats
 {
    Builder::new().read()
 }
-impl Default for ProcDiskStats
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 /// Struct for holding `/proc/diskstats` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct DiskStats
 {
     pub block_major: u64,
@@ -149,14 +139,11 @@ pub struct DiskStats
 
 impl ProcDiskStats {
     pub fn new() -> ProcDiskStats {
-        ProcDiskStats {
-            disk_stats: vec![],
-        }
+        ProcDiskStats::default() 
     }
     pub fn parse_proc_diskstats(
         proc_diskstats: &str,
-    ) -> ProcDiskStats
-    {
+    ) -> ProcDiskStats {
         let mut procdiskstats = ProcDiskStats::new();
         for line in proc_diskstats.lines()
         {
@@ -167,6 +154,18 @@ impl ProcDiskStats {
     fn parse_proc_diskstats_line(proc_diskstats_line: &str) -> DiskStats
     {
         let mut fields = proc_diskstats_line.split_whitespace();
+
+        let parse_next_and_conversion_into_option_u64 = |result: Option<&str>| -> Option<u64> {
+            match result {
+                None => None,
+                Some(value) => {
+                    match value.parse::<u64>() {
+                        Err(_) => None,
+                        Ok(number) => Some(number),
+                    }
+                },
+            }
+        };
 
         DiskStats {
             block_major: fields.next().unwrap().parse::<u64>().unwrap(),
@@ -183,26 +182,12 @@ impl ProcDiskStats {
             ios_in_progress: fields.next().unwrap().parse::<u64>().unwrap(),
             ios_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
             ios_weighted_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
-            discards_completed_success: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
-            discards_merged: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
-            discards_sectors: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
-            discards_time_spent_ms: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
-            flush_requests_completed_success: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
-            flush_requests_time_spent_ms: ProcDiskStats::parse_next_and_conversion_into_option_u64(fields.next()),
-        }
-    }
-    fn parse_next_and_conversion_into_option_u64(result: Option<&str>) -> Option<u64>
-    {
-        match result
-        {
-            None => None,
-            Some(value) => {
-                match value.parse::<u64>()
-                {
-                    Err(_) => None,
-                    Ok(number) => Some(number),
-                }
-            }
+            discards_completed_success: parse_next_and_conversion_into_option_u64(fields.next()),
+            discards_merged: parse_next_and_conversion_into_option_u64(fields.next()),
+            discards_sectors: parse_next_and_conversion_into_option_u64(fields.next()),
+            discards_time_spent_ms: parse_next_and_conversion_into_option_u64(fields.next()),
+            flush_requests_completed_success: parse_next_and_conversion_into_option_u64(fields.next()),
+            flush_requests_time_spent_ms: parse_next_and_conversion_into_option_u64(fields.next()),
         }
     }
     pub fn read_proc_diskstats(proc_diskstats_file: &str) -> ProcDiskStats
@@ -327,7 +312,7 @@ mod tests {
 
         create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
         write(format!("{}/diskstats", test_path), proc_diskstats).expect(format!("Error writing to {}/diskstats", test_path).as_str());
-        let result = Builder::new().file_name(format!("{}/diskstats", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcDiskStats { disk_stats: vec![
@@ -357,7 +342,7 @@ mod tests {
 
         create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
         write(format!("{}/diskstats", test_path), proc_diskstats).expect(format!("Error writing to {}/diskstats", test_path).as_str());
-        let result = Builder::new().file_name(format!("{}/diskstats", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcDiskStats { disk_stats: vec![

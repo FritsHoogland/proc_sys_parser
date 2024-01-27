@@ -148,29 +148,32 @@ pub struct ProcMemInfo {
 }
 
 /// Builder pattern for [`ProcMemInfo`]
+#[derive(Default)]
 pub struct Builder {
-    pub proc_meminfo_file: String,
-}
-
-impl Default for Builder {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub proc_path : String,
+    pub proc_file : String,
 }
 
 impl Builder {
     pub fn new() -> Builder {
         Builder {
-            proc_meminfo_file: "/proc/meminfo".to_string(),
+            proc_path: "/proc".to_string(),
+            proc_file: "meminfo".to_string(),
         }
     }
 
-    pub fn file_name(mut self, proc_meminfo_file: &str) -> Builder {
-        self.proc_meminfo_file = proc_meminfo_file.to_string();
+    pub fn path(mut self, proc_path: &str) -> Builder
+    {
+        self.proc_path = proc_path.to_string();
+        self
+    }
+    pub fn file(mut self, proc_file: &str) -> Builder
+    {
+        self.proc_file = proc_file.to_string();
         self
     }
     pub fn read(self) -> ProcMemInfo {
-        ProcMemInfo::read_proc_meminfo(&self.proc_meminfo_file)
+        ProcMemInfo::read_proc_meminfo(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -579,9 +582,7 @@ Hugetlb:               0 kB";
 
         write(format!("{}/meminfo", test_path), proc_meminfo)
             .expect(format!("Error writing to {}/meminfo", test_path).as_str());
-        let result = Builder::new()
-            .file_name(format!("{}/meminfo", test_path).as_str())
-            .read();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 

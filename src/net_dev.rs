@@ -34,40 +34,42 @@ let proc_net_dev = Builder::new().file_name("/myproc/net/dev").read();
 use std::fs::read_to_string;
 
 /// Struct for holding `/proc/net/dev` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcNetDev {
     pub interface: Vec<InterfaceStats>
 }
 
 /// Builder pattern for [`ProcNetDev`]
+#[derive(Default)]
 pub struct Builder
 {
-    pub proc_net_dev_file: String
-}
-
-impl Default for Builder
-{
-    fn default() -> Self
-    {
-        Self::new()
-    }
+    pub proc_path : String,
+    pub proc_file : String,
 }
 
 impl Builder
 {
     pub fn new() -> Builder
     {
-        Builder { proc_net_dev_file: "/proc/net/dev".to_string() }
+        Builder { 
+            proc_path: "/proc".to_string(),
+            proc_file: "net/dev".to_string(),
+        }
     }
 
-    pub fn file_name(mut self, proc_net_dev_file: &str) -> Builder
+    pub fn path(mut self, proc_path: &str) -> Builder
     {
-        self.proc_net_dev_file = proc_net_dev_file.to_string();
+        self.proc_path = proc_path.to_string();
+        self
+    }
+    pub fn file(mut self, proc_file: &str) -> Builder
+    {
+        self.proc_file = proc_file.to_string();
         self
     }
     pub fn read(self) -> ProcNetDev
     {
-        ProcNetDev::read_proc_net_dev(&self.proc_net_dev_file)
+        ProcNetDev::read_proc_net_dev(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -76,12 +78,6 @@ impl Builder
 pub fn read() -> ProcNetDev
 {
    Builder::new().read()
-}
-impl Default for ProcNetDev
-{
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 /// Struct for holding statistics of individual network interfaces
@@ -109,9 +105,7 @@ pub struct InterfaceStats
 
 impl ProcNetDev {
     pub fn new() -> ProcNetDev {
-        ProcNetDev {
-            interface: vec![],
-        }
+        ProcNetDev::default()
     }
     pub fn parse_proc_net_dev(
         proc_net_dev: &str,
@@ -206,11 +200,10 @@ mod tests {
 
         let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
         let test_path = format!("/tmp/test.{}", directory_suffix);
-        create_dir_all(format!("{}", test_path)).expect("Error creating mock directory.");
+        create_dir_all(format!("{}/net", test_path)).expect("Error creating mock directory.");
 
-        write(format!("{}/net_dev", test_path), proc_netdev).expect(format!("Error writing to {}/net_dev", test_path).as_str());
-        let result = Builder::new().file_name(format!("{}/net_dev", test_path).as_str()).read();
-
+        write(format!("{}/net/dev", test_path), proc_netdev).expect(format!("Error writing to {}/net/dev", test_path).as_str());
+        let result = Builder::new().path(&test_path).read();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcNetDev { interface:

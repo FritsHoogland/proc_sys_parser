@@ -52,12 +52,11 @@ ProcPressure {
 ```
 (edited for readability)
 
-If you want to change the path that is read for [`ProcPressure`], which is `/proc/pressure`
-by default, use:
+If you want to change the default path that is read for [`ProcPressure`], which is `/proc`, use:
 ```no_run
 use proc_sys_parser::{pressure, pressure::Builder};
 
-let proc_pressure = Builder::new().path("/myproc/pressure").read();
+let proc_pressure = Builder::new().path("/myproc").read();
 ```
 
 If the `/proc/pressure` entry is not available because it didn't exist in that linux version, or because it's not enabled
@@ -69,13 +68,13 @@ use log::warn;
 
 
 /// Struct for holding `/proc/pressure` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcPressure {
     /// psi is None if no /proc/pressure is found.
     pub psi: Option<Psi>,
 }
 ///
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct Psi {
     pub cpu_some_avg10: f64,
     pub cpu_some_avg60: f64,
@@ -107,102 +106,52 @@ impl Psi
 {
     pub fn new() -> Psi
     {
-        Psi {
-            cpu_some_avg10: 0.0,
-            cpu_some_avg60: 0.0,
-            cpu_some_avg300: 0.0,
-            cpu_some_total: 0,
-            cpu_full_avg10: None,
-            cpu_full_avg60: None,
-            cpu_full_avg300: None,
-            cpu_full_total: None,
-            io_some_avg10: 0.0,
-            io_some_avg60: 0.0,
-            io_some_avg300: 0.0,
-            io_some_total: 0,
-            io_full_avg10: 0.0,
-            io_full_avg60: 0.0,
-            io_full_avg300: 0.0,
-            io_full_total: 0,
-            memory_some_avg10: 0.0,
-            memory_some_avg60: 0.0,
-            memory_some_avg300: 0.0,
-            memory_some_total: 0,
-            memory_full_avg10: 0.0,
-            memory_full_avg60: 0.0,
-            memory_full_avg300: 0.0,
-            memory_full_total: 0,
-        }
-    }
-}
-
-impl Default for Psi {
-    fn default() -> Self {
-        Self::new()
+        Psi::default() 
     }
 }
 
 /// Builder pattern for [`ProcPressure`]
-pub struct Builder
-{
-    pub proc_pressure_path: String
-}
-
-impl Default for Builder
-{
-    fn default() -> Self
-    {
-        Self::new()
-    }
+#[derive(Default)]
+pub struct Builder {
+    pub proc_path : String,
 }
 
 impl Builder
 {
-    pub fn new() -> Builder
-    {
-        Builder { proc_pressure_path: "/proc/pressure".to_string() }
+    pub fn new() -> Builder {
+        Builder { 
+            proc_path: "/proc".to_string(),
+        }
     }
 
-    pub fn path(mut self, proc_pressure_path: &str) -> Builder
-    {
-        self.proc_pressure_path = proc_pressure_path.to_string();
+    pub fn path(mut self, proc_path: &str) -> Builder {
+        self.proc_path = proc_path.to_string();
         self
     }
-    pub fn read(self) -> ProcPressure
-    {
-        ProcPressure::read_proc_pressure(&self.proc_pressure_path)
+    pub fn read(self) -> ProcPressure {
+        ProcPressure::read_proc_pressure(format!("{}/pressure", &self.proc_path).as_str())
     }
 }
 
 /// The main function for building a [`ProcPressure`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> ProcPressure
-{
+pub fn read() -> ProcPressure {
    Builder::new().read()
 }
 
-impl Default for ProcPressure {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 impl ProcPressure {
-    pub fn new() -> ProcPressure
-    {
+    pub fn new() -> ProcPressure {
         ProcPressure {
             psi: None,
         }
     }
-    pub fn read_proc_pressure(proc_pressure_path: &str) -> ProcPressure
-    {
+    pub fn read_proc_pressure(proc_pressure_path: &str) -> ProcPressure {
         let mut proc_pressure = ProcPressure::new();
 
         let mut psi = Psi::new();
 
-        for psi_target in ["cpu", "io", "memory"]
-        {
-            if ProcPressure::parse_pressure_entity(psi_target, proc_pressure_path, &mut psi).is_none()
-            {
+        for psi_target in ["cpu", "io", "memory"] {
+            if ProcPressure::parse_pressure_entity(psi_target, proc_pressure_path, &mut psi).is_none() {
                 return proc_pressure;
             }
         }
@@ -210,8 +159,7 @@ impl ProcPressure {
 
         proc_pressure
     }
-    fn parse_pressure_entity(file: &str, proc_pressure_path: &str, psi: &mut Psi) -> Option<usize>
-    {
+    fn parse_pressure_entity(file: &str, proc_pressure_path: &str, psi: &mut Psi) -> Option<usize> {
         match read_to_string(format!("{}/{}", &proc_pressure_path, file)) {
             Ok(psi_contents)  => {
                 for line in psi_contents.lines() {
@@ -302,7 +250,7 @@ full avg10=16.00 avg60=17.00 avg300=18.00 total=5390695
         write(format!("{}/pressure/io", test_path), proc_pressure_io).expect(format!("Error writing to {}/pressure/io", test_path).as_str());
         write(format!("{}/pressure/memory", test_path), proc_pressure_memory).expect(format!("Error writing to {}/pressure/memory", test_path).as_str());
 
-        let result = Builder::new().path(format!("{}/pressure", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 
@@ -351,8 +299,7 @@ full avg10=16.00 avg60=17.00 avg300=18.00 total=5390695
         let test_path = format!("/tmp/test.{}", directory_suffix);
         create_dir_all(format!("{}", test_path)).expect("Error creating mock directory.");
 
-        let result = Builder::new().path(format!("{}/pressure", test_path).as_str()).read();
-
+        let result = Builder::new().path(&test_path).read();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcPressure { psi: None });

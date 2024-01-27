@@ -466,21 +466,28 @@ pub struct ProcVmStat {
 /// Builder pattern for [`ProcVmStat`]
 #[derive(Default)]
 pub struct Builder {
-    pub proc_vmstat_file: String,
+    pub proc_path : String,
+    pub proc_file : String,
 }
+
 impl Builder {
     pub fn new() -> Builder {
-        Builder {
-            proc_vmstat_file: "/proc/vmstat".to_string(),
+        Builder { 
+            proc_path: "/proc".to_string(),
+            proc_file: "vmstat".to_string(),
         }
     }
 
-    pub fn file_name(mut self, proc_vmstat_file: &str) -> Builder {
-        self.proc_vmstat_file = proc_vmstat_file.to_string();
+    pub fn path(mut self, proc_path: &str) -> Builder {
+        self.proc_path = proc_path.to_string();
+        self
+    }
+    pub fn file(mut self, proc_file: &str) -> Builder {
+        self.proc_file = proc_file.to_string();
         self
     }
     pub fn read(self) -> ProcVmStat {
-        ProcVmStat::read_proc_vmstat(&self.proc_vmstat_file)
+        ProcVmStat::read_proc_vmstat(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -1369,9 +1376,7 @@ nr_unstable 0";
 
         write(format!("{}/vmstat", test_path), proc_vmstat)
             .expect(format!("Error writing to {}/vmstat", test_path).as_str());
-        let result = Builder::new()
-            .file_name(format!("{}/vmstat", test_path).as_str())
-            .read();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 

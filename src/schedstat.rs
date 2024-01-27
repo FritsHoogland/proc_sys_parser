@@ -83,31 +83,31 @@ use std::fs::read_to_string;
 use log::warn;
 
 /// Builder pattern for [`ProcSchedStat`]
-pub struct Builder
-{
-    pub proc_schedstat_file: String
+#[derive(Default)]
+pub struct Builder {
+    pub proc_path : String,
+    pub proc_file : String,
 }
 
-impl Default for Builder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl Builder
-{
-    pub fn new() -> Builder
-    {
-        Builder { proc_schedstat_file: "/proc/schedstat".to_string() }
+impl Builder {
+    pub fn new() -> Builder {
+        Builder { 
+            proc_path: "/proc".to_string(),
+            proc_file: "schedstat".to_string(),
+        }
     }
 
-    pub fn file_name(mut self, proc_schedstat_file: &str) -> Builder
-    {
-        self.proc_schedstat_file = proc_schedstat_file.to_string();
+    pub fn path(mut self, proc_path: &str) -> Builder {
+        self.proc_path = proc_path.to_string();
+        self
+    }
+    pub fn file(mut self, proc_file: &str) -> Builder {
+        self.proc_file = proc_file.to_string();
         self
     }
     pub fn read(self) -> ProcSchedStat
     {
-        ProcSchedStat::read_proc_schedstat(&self.proc_schedstat_file)
+        ProcSchedStat::read_proc_schedstat(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -118,13 +118,8 @@ pub fn read() -> ProcSchedStat
     Builder::new().read()
 }
 
-impl Default for ProcSchedStat {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 /// Struct for holding `/proc/schedstat` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcSchedStat {
     pub version: u64,
     pub timestamp: u64,
@@ -142,12 +137,7 @@ pub struct Domain {
 
 impl ProcSchedStat {
     pub fn new() -> ProcSchedStat {
-        ProcSchedStat {
-            version: 0,
-            timestamp: 0,
-            cpu: vec![],
-            domain: vec![],
-        }
+        ProcSchedStat::default() 
     }
     pub fn parse_proc_schedstat_output(
         proc_schedstat: &str,
@@ -183,12 +173,6 @@ impl ProcSchedStat {
                     .map(|number| number.parse::<u64>().unwrap())
                     .collect()
             },
-            //line if line.starts_with("domain") => {
-            //    line.split_whitespace()
-            //        .map(|domain| if domain.starts_with("domain") { domain.strip_prefix("domain").unwrap() } else { domain } )
-            //        .map(|number| number.parse::<u64>().unwrap_or(u64::from_str_radix(number, 16).unwrap()))
-            //        .collect()
-            //},
             line => {
                 warn!("Unknown entry found: {}", line);
                 Vec::new()
@@ -277,7 +261,6 @@ mod tests {
     fn parse_domain_line() {
         let domain_line = "domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
         let result = ProcSchedStat::generate_number_vector(&domain_line);
-        //assert_eq!(result, vec![0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(result, vec![]);
     }
     #[test]
@@ -339,7 +322,7 @@ domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
         write(format!("{}/schedstat", test_path), proc_schedstat).expect(format!("Error writing to {}/schedstat", test_path).as_str());
 
-        let result = Builder::new().file_name(format!("{}/schedstat", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcSchedStat { version: 15,
@@ -380,7 +363,7 @@ domain2 ffffffff,ffffffff,ffffffff,ffffffff 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 
         write(format!("{}/schedstat", test_path), proc_schedstat).expect(format!("Error writing to {}/schedstat", test_path).as_str());
 
-        let result = Builder::new().file_name(format!("{}/schedstat", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcSchedStat { version: 15, 

@@ -57,7 +57,7 @@ use log::warn;
 
 
 /// Struct for holding cpu times in milliseconds
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct CpuStat {
     /// cpu name. 'cpu' means total of all cpus, cpuN means individual cpu
     pub name: String,
@@ -87,33 +87,30 @@ pub struct CpuStat {
 }
 
 /// Builder pattern for [`ProcStat`]
-pub struct Builder
-{
-    pub proc_stat_file: String
+#[derive(Default)]
+pub struct Builder {
+    pub proc_path : String,
+    pub proc_file : String,
 }
 
-impl Default for Builder
-{
-    fn default() -> Self
-    {
-        Self::new()
-    }
-}
-impl Builder
-{
-    pub fn new() -> Builder
-    {
-        Builder { proc_stat_file: "/proc/stat".to_string() }
+impl Builder {
+    pub fn new() -> Builder {
+        Builder { 
+            proc_path: "/proc".to_string(),
+            proc_file: "stat".to_string(),
+        }
     }
 
-    pub fn file_name(mut self, proc_stat_file: &str) -> Builder
-    {
-        self.proc_stat_file = proc_stat_file.to_string();
+    pub fn path(mut self, proc_path: &str) -> Builder {
+        self.proc_path = proc_path.to_string();
         self
     }
-    pub fn read(self) -> ProcStat
-    {
-        ProcStat::read_proc_stat(&self.proc_stat_file)
+    pub fn file(mut self, proc_file: &str) -> Builder {
+        self.proc_file = proc_file.to_string();
+        self
+    }
+    pub fn read(self) -> ProcStat {
+        ProcStat::read_proc_stat(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
@@ -125,7 +122,7 @@ pub fn read() -> ProcStat
 }
 
 /// Struct for holding `/proc/stat` statistics
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcStat {
     pub cpu_total: CpuStat,
     pub cpu_individual: Vec<CpuStat>,
@@ -138,24 +135,9 @@ pub struct ProcStat {
     pub softirq: Vec<u64>,
 }
 
-impl Default for ProcStat {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 impl ProcStat {
     pub fn new() -> ProcStat {
-        ProcStat {
-            cpu_total: CpuStat::new(),
-            cpu_individual: vec![],
-            interrupts: vec![],
-            context_switches: 0,
-            boot_time: 0,
-            processes: 0,
-            processes_running: 0,
-            processes_blocked: 0,
-            softirq: vec![],
-        }
+        ProcStat::default() 
     }
     pub fn parse_proc_stat_output(
         proc_stat: &str,
@@ -222,26 +204,28 @@ impl ProcStat {
 }
 
 impl CpuStat {
-    fn new() -> CpuStat {
-        CpuStat {
-            name: "".to_string(),
-            user: 0,
-            nice: 0,
-            system: 0,
-            idle: 0,
-            iowait: None,
-            irq: None,
-            softirq: None,
-            steal: None,
-            guest: None,
-            guest_nice: None,
-        }
-    }
+    //fn new() -> CpuStat {
+    //    CpuStat::default()
+    //}
     pub fn generate_cpu_times(proc_stat_cpu_line: &str) -> CpuStat
     {
         // Note: time in jiffies, must be divided by CLK_TCK to show time in seconds.
         // CLK_TCK is set by CONFIG_HZ and is 100 on most enterprise linuxes.
         let clock_time = sysconf(SysconfVar::CLK_TCK).unwrap_or(Some(100)).unwrap_or(100) as u64;
+
+        let parse_next_and_conversion_into_option_milliseconds = |result: Option<&str>, clock_time: u64 | -> Option<u64> {
+            match result
+            {
+                None => None,
+                Some(value) => {
+                    match value.parse::<u64>()
+                    {
+                        Err(_) => None,
+                        Ok(number) => Some((number*1000_u64)/clock_time),
+                    }
+                },
+            }
+        };
 
         let mut splitted = proc_stat_cpu_line.split_whitespace();
         CpuStat {
@@ -250,33 +234,21 @@ impl CpuStat {
             nice: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
             system: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
             idle: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            iowait: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-            irq: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-            softirq: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-            steal: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-            guest: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-            guest_nice: CpuStat::parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-        }
-    }
-    fn parse_next_and_conversion_into_option_milliseconds(result: Option<&str>, clock_time: u64) -> Option<u64>
-    {
-        match result
-        {
-            None => None,
-            Some(value) => {
-                match value.parse::<u64>()
-                {
-                    Err(_) => None,
-                    Ok(number) => Some((number*1000_u64)/clock_time),
-                }
-            },
+            iowait: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            irq: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            softirq: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            steal: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            guest: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
+            guest_nice: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{write, remove_file};
+    use std::fs::{write, create_dir_all, remove_dir_all};
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
     use super::*;
 
     // cpu times are in jiffies, which are clock ticks.
@@ -361,9 +333,14 @@ processes 10
 procs_running 1
 procs_blocked 0
 softirq 100 0 1 1";
-        write("/tmp/_test_proc_stat", proc_stat).expect("Error writing to /tmp/_test_proc_stat");
-        let result = Builder::new().file_name("/tmp/_test_proc_stat").read();
-        remove_file("/tmp/_test_proc_stat").unwrap();
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
+        
+        write(format!("{}/stat", test_path), proc_stat).expect(format!("Error writing to {}/stat", test_path).as_str());
+        let result = Builder::new().path(&test_path).read();
+        remove_dir_all(test_path).unwrap();
+
         assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 10, nice: 10, system: 10, idle: 10, iowait: Some(10), irq: Some(0), softirq: Some(10), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
             cpu_individual: vec![CpuStat { name: "cpu0".to_string(),user: 10, nice: 10, system: 10, idle: 10, iowait: Some(10), irq: Some(0), softirq: Some(10), steal: Some(0), guest: Some(0), guest_nice: Some(0) }],
             interrupts: vec![100, 0, 1, 1],

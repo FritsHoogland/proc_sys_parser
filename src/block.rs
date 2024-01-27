@@ -116,40 +116,32 @@ let proc_block = Builder::new().path("/my-sys/block").read();
 use std::fs::{read_to_string, read_dir, DirEntry};
 
 /// Struct for holding `/sys/block` block device statistics and information
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct SysBlock {
     pub block_devices: Vec<BlockDevice>
 }
 
 /// Builder pattern for [`SysBlock`]
-pub struct Builder
-{
-    pub sys_block_path: String
-}
-
-impl Default for Builder
-{
-    fn default() -> Self
-    {
-        Self::new()
-    }
+#[derive(Default)]
+pub struct Builder {
+    pub sys_path : String,
 }
 
 impl Builder
 {
-    pub fn new() -> Builder
-    {
-        Builder { sys_block_path: "/sys/block".to_string() }
+    pub fn new() -> Builder {
+        Builder { 
+            sys_path: "/sys".to_string() 
+        }
     }
-
-    pub fn path(mut self, sys_block_path: &str) -> Builder
-    {
-        self.sys_block_path = sys_block_path.to_string();
+    pub fn path(mut self, sys_path: &str) -> Builder {
+        self.sys_path = sys_path.to_string();
         self
     }
+
     pub fn read(self) -> SysBlock
     {
-        SysBlock::read_sys_block_devices(&self.sys_block_path)
+        SysBlock::read_sys_block_devices(format!("{}/block", self.sys_path).as_str())
     }
 }
 
@@ -158,12 +150,6 @@ impl Builder
 pub fn read() -> SysBlock
 {
    Builder::new().read()
-}
-impl Default for SysBlock
-{
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 /// Struct for holding `/sys/block/<device>` statistics and information
@@ -408,9 +394,7 @@ impl BlockDevice
 
 impl SysBlock {
     pub fn new() -> SysBlock {
-        SysBlock {
-           block_devices: vec![],
-        }
+        SysBlock::default() 
     }
     fn parse_dev(
         blockdevice_data: &mut BlockDevice,
@@ -701,7 +685,7 @@ mod tests {
         write(format!("{}/block/sda/size", test_path),size).expect("error writing to mock sysfs size file.");
         write(format!("{}/block/sda/stat", test_path),stat).expect("error writing to mock sysfs stat file.");
 
-        let result = Builder::new().path(format!("{}/block", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 
@@ -875,7 +859,7 @@ mod tests {
         write(format!("{}/block/sda/size", test_path), size).expect("error writing to mock sysfs size file.");
         write(format!("{}/block/sda/stat", test_path), stat).expect("error writing to mock sysfs stat file.");
 
-        let result = Builder::new().path(format!("{}/block", test_path).as_str()).read();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 
