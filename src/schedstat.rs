@@ -41,7 +41,7 @@ by default, use:
 ```no_run
 use proc_sys_parser::{schedstat, schedstat::{ProcSchedStat, Builder}};
 
-let proc_schedstat = Builder::new().file_name("/myproc/schedstat").read();
+let proc_schedstat = Builder::new().path("/myproc").read();
 ```
 
 # cpu vector numbers
@@ -80,6 +80,7 @@ to match the statistic in the vector.
 
 */
 use std::fs::read_to_string;
+use crate::ProcSysParserError;
 use log::warn;
 
 /// Builder pattern for [`ProcSchedStat`]
@@ -105,16 +106,14 @@ impl Builder {
         self.proc_file = proc_file.to_string();
         self
     }
-    pub fn read(self) -> ProcSchedStat
-    {
+    pub fn read(self) -> Result<ProcSchedStat, ProcSysParserError> {
         ProcSchedStat::read_proc_schedstat(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
 /// The main function for building a [`ProcSchedStat`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> ProcSchedStat
-{
+pub fn read() -> Result<ProcSchedStat, ProcSysParserError> {
     Builder::new().read()
 }
 
@@ -139,49 +138,55 @@ impl ProcSchedStat {
     pub fn new() -> ProcSchedStat {
         ProcSchedStat::default() 
     }
-    pub fn parse_proc_schedstat_output(
-        proc_schedstat: &str,
-    ) -> ProcSchedStat
-    {
+    pub fn parse_proc_schedstat_output(proc_schedstat: &str) -> Result<ProcSchedStat, ProcSysParserError> {
         let mut schedstat = ProcSchedStat::new();
+        // current_cpu keeps the current cpu number.
+        // this is used for populating the domain struct belonging to each cpu
         let mut current_cpu = &0;
         for line in proc_schedstat.lines() {
             match line {
                 line if line.starts_with("version ") => {
-                    schedstat.version = ProcSchedStat::generate_number_unsigned(line);
+                    schedstat.version = ProcSchedStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("timestamp ") => {
-                    schedstat.timestamp = ProcSchedStat::generate_number_unsigned(line);
+                    schedstat.timestamp = ProcSchedStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("cpu") => {
-                    schedstat.cpu.push(ProcSchedStat::generate_number_vector(line));
-                    current_cpu = schedstat.cpu.last().unwrap().iter().next().unwrap();
+                    schedstat.cpu.push(ProcSchedStat::generate_number_vector(line)?);
+                    current_cpu = schedstat.cpu.last()
+                        .unwrap()
+                        .iter()
+                        .next()
+                        .unwrap();
                 },
                 line if line.starts_with("domain") => {
-                    schedstat.domain.push(ProcSchedStat::generate_domain_struct(line, current_cpu));
+                    schedstat.domain.push(ProcSchedStat::generate_domain_struct(line, current_cpu)?);
                 },
                 _  => warn!("schedstat: unknown entry found: {}", line),
             }
         }
-        schedstat
+        Ok(schedstat)
     }
-    fn generate_number_vector(proc_schedstat_line: &str) -> Vec<u64> {
+    fn generate_number_vector(proc_schedstat_line: &str) -> Result<Vec<u64>, ProcSysParserError> {
         let proc_schedstat_line = match proc_schedstat_line {
             line if line.starts_with("cpu") => {
                 line.split_whitespace()
                     .map(|cpu| if cpu.starts_with("cpu") { cpu.strip_prefix("cpu").unwrap() } else { cpu } )
-                    .map(|number| number.parse::<u64>().unwrap())
-                    .collect()
+                    .map(|row| row.parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .collect::<Result<Vec<_>, _>>()?
             },
             line => {
                 warn!("Unknown entry found: {}", line);
                 Vec::new()
             },
         };
-        proc_schedstat_line
+        Ok(proc_schedstat_line)
     }
-    fn generate_domain_struct(proc_schedstat_line: &str, current_cpu: &u64) -> Domain {
+    fn generate_domain_struct(proc_schedstat_line: &str, current_cpu: &u64) -> Result<Domain, ProcSysParserError> {
         
+        /*
         let domain_nr = proc_schedstat_line
             .split_whitespace()
             .map(|line| line.strip_prefix("domain").unwrap_or_default())
@@ -189,7 +194,15 @@ impl ProcSchedStat {
             .map(|cpu_nr| cpu_nr.parse::<u64>().unwrap())
             .next()
             .unwrap();
+        */
+        let domain_nr = proc_schedstat_line
+            .split_whitespace()
+            .map(|line| line.strip_prefix("domain").unwrap_or_default())
+            .next()
+            .ok_or(ProcSysParserError::IteratorItemError {item: "schedstat generate_domain_struct domain_nr".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
 
+        /*
         let cpu_masks: Vec<u64> = proc_schedstat_line
             .split_whitespace()
             .nth(1)
@@ -197,31 +210,49 @@ impl ProcSchedStat {
             .split(',')
             .map(|cpu_mask| u64::from_str_radix(cpu_mask, 16).unwrap())
             .collect();
+        */
+        let cpu_masks: Vec<u64> = proc_schedstat_line
+            .split_whitespace()
+            .nth(1)
+            .ok_or(ProcSysParserError::IteratorItemError {item: "schedstat generate_domain_struct cpu_masks".to_string() })?
+            .split(',')
+            .map(|cpu_mask| u64::from_str_radix(cpu_mask, 16).map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
 
+        /*
         let statistics: Vec<u64> = proc_schedstat_line
             .split_whitespace()
             .skip(2)
             .map(|statistics| statistics.parse::<u64>().unwrap())
             .collect();
+        */
+        let statistics: Vec<u64> = proc_schedstat_line
+            .split_whitespace()
+            .skip(2)
+            .map(|statistics| statistics.parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
 
-        Domain {
-            cpu_nr: current_cpu.clone(),
+
+        Ok(Domain {
+            cpu_nr: *current_cpu,
             domain_nr,
             cpu_masks,
             statistics,
-        }
+        })
     }
-    fn generate_number_unsigned(proc_stat_line: &str) -> u64
-    {
-        proc_stat_line.split_whitespace()
-            .skip(1)
-            .map(|number| number.parse::<u64>().unwrap())
-            .next()
-            .unwrap()
+    fn generate_number_unsigned(proc_stat_line: &str) -> Result<u64, ProcSysParserError> {
+        Ok(proc_stat_line.split_whitespace()
+            .nth(1)
+            .ok_or(ProcSysParserError::IteratorItemError {item: "schedstat generate_number_unsigned".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
     }
-    pub fn read_proc_schedstat(proc_schedstat_file: &str) -> ProcSchedStat
-    {
-        let proc_schedstat_output = read_to_string(proc_schedstat_file).unwrap_or_else(|error| panic!("Error {} reading file: {}", error, proc_schedstat_file));
+    pub fn read_proc_schedstat(proc_schedstat_file: &str) -> Result<ProcSchedStat, ProcSysParserError> {
+        let proc_schedstat_output = read_to_string(proc_schedstat_file)
+            .map_err(|error| ProcSysParserError::FileReadError { file: proc_schedstat_file.to_string(), error })?;
         ProcSchedStat::parse_proc_schedstat_output(&proc_schedstat_output)
     }
 }
@@ -240,27 +271,27 @@ mod tests {
     #[test]
     fn parse_version_line() {
         let version_line = "version 15";
-        let result = ProcSchedStat::generate_number_unsigned(&version_line);
+        let result = ProcSchedStat::generate_number_unsigned(&version_line).unwrap();
         assert_eq!(result, 15);
     }
     #[test]
     fn parse_timestamp_line() {
         let timestamp_line = "timestamp 4318766637";
-        let result = ProcSchedStat::generate_number_unsigned(&timestamp_line);
+        let result = ProcSchedStat::generate_number_unsigned(&timestamp_line).unwrap();
         assert_eq!(result, 4318766637);
     }
 
     #[test]
     fn parse_cpu_line() {
         let cpu_line = "cpu0 0 0 0 0 0 0 455307306435 48519572891 4320349";
-        let result = ProcSchedStat::generate_number_vector(&cpu_line);
+        let result = ProcSchedStat::generate_number_vector(&cpu_line).unwrap();
         assert_eq!(result, vec![0, 0, 0, 0, 0, 0, 0, 455307306435, 48519572891, 4320349]);
     }
 
     #[test]
     fn parse_domain_line() {
         let domain_line = "domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
-        let result = ProcSchedStat::generate_number_vector(&domain_line);
+        let result = ProcSchedStat::generate_number_vector(&domain_line).unwrap();
         assert_eq!(result, vec![]);
     }
     #[test]
@@ -279,7 +310,7 @@ cpu4 0 0 0 0 0 0 438666554521 43706845278 3787400
 domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 cpu5 0 0 0 0 0 0 444708323872 42862371788 3900565
 domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0";
-        let result = ProcSchedStat::parse_proc_schedstat_output(proc_schedstat);
+        let result = ProcSchedStat::parse_proc_schedstat_output(proc_schedstat).unwrap();
         assert_eq!(result, ProcSchedStat { version: 15,
             timestamp: 4318961659,
             cpu: vec![
@@ -322,7 +353,7 @@ domain0 3f 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
         write(format!("{}/schedstat", test_path), proc_schedstat).expect(format!("Error writing to {}/schedstat", test_path).as_str());
 
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcSchedStat { version: 15,
@@ -363,7 +394,7 @@ domain2 ffffffff,ffffffff,ffffffff,ffffffff 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 
         write(format!("{}/schedstat", test_path), proc_schedstat).expect(format!("Error writing to {}/schedstat", test_path).as_str());
 
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcSchedStat { version: 15, 

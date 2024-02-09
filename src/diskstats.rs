@@ -58,11 +58,12 @@ by default, use:
 ```no_run
 use proc_sys_parser::{diskstats, diskstats::{ProcDiskStats, Builder}};
 
-let proc_diskstats = Builder::new().file_name("/myproc/diskstats").read();
+let proc_diskstats = Builder::new().path("/myproc").read();
 ```
 
 */
 use std::fs::read_to_string;
+use crate::ProcSysParserError;
 
 /// Struct for holding `/proc/diskstats` statistics
 #[derive(Debug, PartialEq, Default)]
@@ -93,22 +94,20 @@ impl Builder {
         self.proc_file = proc_file.to_string();
         self
     }
-    pub fn read(self) -> ProcDiskStats {
+    pub fn read(self) -> Result<ProcDiskStats, ProcSysParserError> {
         ProcDiskStats::read_proc_diskstats(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
 /// The main function for building a [`ProcDiskStats`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> ProcDiskStats
-{
+pub fn read() -> Result<ProcDiskStats, ProcSysParserError> {
    Builder::new().read()
 }
 
 /// Struct for holding `/proc/diskstats` statistics
 #[derive(Debug, PartialEq, Default)]
-pub struct DiskStats
-{
+pub struct DiskStats {
     pub block_major: u64,
     pub block_minor: u64,
     pub device_name: String,
@@ -143,16 +142,14 @@ impl ProcDiskStats {
     }
     pub fn parse_proc_diskstats(
         proc_diskstats: &str,
-    ) -> ProcDiskStats {
+    ) -> Result<ProcDiskStats, ProcSysParserError> {
         let mut procdiskstats = ProcDiskStats::new();
-        for line in proc_diskstats.lines()
-        {
-            procdiskstats.disk_stats.push(ProcDiskStats::parse_proc_diskstats_line(line));
+        for line in proc_diskstats.lines() {
+            procdiskstats.disk_stats.push(ProcDiskStats::parse_proc_diskstats_line(line)?);
         }
-        procdiskstats
+        Ok(procdiskstats)
     }
-    fn parse_proc_diskstats_line(proc_diskstats_line: &str) -> DiskStats
-    {
+    fn parse_proc_diskstats_line(proc_diskstats_line: &str) -> Result<DiskStats, ProcSysParserError> {
         let mut fields = proc_diskstats_line.split_whitespace();
 
         let parse_next_and_conversion_into_option_u64 = |result: Option<&str>| -> Option<u64> {
@@ -167,32 +164,63 @@ impl ProcDiskStats {
             }
         };
 
-        DiskStats {
-            block_major: fields.next().unwrap().parse::<u64>().unwrap(),
-            block_minor: fields.next().unwrap().parse::<u64>().unwrap(),
-            device_name: fields.next().unwrap().to_string(),
-            reads_completed_success: fields.next().unwrap().parse::<u64>().unwrap(),
-            reads_merged: fields.next().unwrap().parse::<u64>().unwrap(),
-            reads_sectors: fields.next().unwrap().parse::<u64>().unwrap(),
-            reads_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
-            writes_completed_success: fields.next().unwrap().parse::<u64>().unwrap(),
-            writes_merged: fields.next().unwrap().parse::<u64>().unwrap(),
-            writes_sectors: fields.next().unwrap().parse::<u64>().unwrap(),
-            writes_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
-            ios_in_progress: fields.next().unwrap().parse::<u64>().unwrap(),
-            ios_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
-            ios_weighted_time_spent_ms: fields.next().unwrap().parse::<u64>().unwrap(),
+        Ok(
+            DiskStats {
+            block_major: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats block_major".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            block_minor: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats block_minor".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            device_name: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats device_name".to_string() })?
+                .to_string(),
+            reads_completed_success: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_completed_success".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            reads_merged: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_merged".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            reads_sectors: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_sectors".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            reads_time_spent_ms: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_time_spent_ms".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            writes_completed_success: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_completed_success".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            writes_merged: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_merged".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            writes_sectors: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_sectors".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            writes_time_spent_ms: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_time_spent_ms".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            ios_in_progress: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats ios_in_progress".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            ios_time_spent_ms: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats ios_time_spent_ms".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            ios_weighted_time_spent_ms: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats ios_weighted_time_spent_ms".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
             discards_completed_success: parse_next_and_conversion_into_option_u64(fields.next()),
             discards_merged: parse_next_and_conversion_into_option_u64(fields.next()),
             discards_sectors: parse_next_and_conversion_into_option_u64(fields.next()),
             discards_time_spent_ms: parse_next_and_conversion_into_option_u64(fields.next()),
             flush_requests_completed_success: parse_next_and_conversion_into_option_u64(fields.next()),
             flush_requests_time_spent_ms: parse_next_and_conversion_into_option_u64(fields.next()),
-        }
+        })
     }
-    pub fn read_proc_diskstats(proc_diskstats_file: &str) -> ProcDiskStats
-    {
-        let proc_diskstats_output = read_to_string(proc_diskstats_file).unwrap_or_else(|error|panic!("Error {} reading file: {}", error, proc_diskstats_file));
+
+    pub fn read_proc_diskstats(proc_diskstats_file: &str) -> Result<ProcDiskStats, ProcSysParserError> {
+        let proc_diskstats_output = read_to_string(proc_diskstats_file)
+            .map_err(|error| ProcSysParserError::FileReadError { file: proc_diskstats_file.to_string(), error })?;
+
         ProcDiskStats::parse_proc_diskstats(&proc_diskstats_output)
     }
 }
@@ -207,7 +235,7 @@ mod tests {
     #[test]
     fn parse_proc_diskstats_line() {
         let diskstats_line = "   7       0 loop0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17";
-        let result = ProcDiskStats::parse_proc_diskstats_line(&diskstats_line);
+        let result = ProcDiskStats::parse_proc_diskstats_line(&diskstats_line).unwrap();
         assert_eq!(result, DiskStats { block_major: 7,
             block_minor: 0,
             device_name: "loop0".to_string(),
@@ -233,7 +261,7 @@ mod tests {
     #[test]
     fn parse_proc_diskstats_line_before_linux_4_18() {
         let diskstats_line = "   7       0 loop0 1 2 3 4 5 6 7 8 9 10 11";
-        let result = ProcDiskStats::parse_proc_diskstats_line(&diskstats_line);
+        let result = ProcDiskStats::parse_proc_diskstats_line(&diskstats_line).unwrap();
         assert_eq!(result, DiskStats { block_major: 7,
             block_minor: 0,
             device_name: "loop0".to_string(),
@@ -272,7 +300,7 @@ mod tests {
  253      15 vda15 136 1547 9919 20 1 0 1 0 0 52 21 1 0 186691 0 0 0
  259       0 vda16 159 15 10711 31 20 22 242 12 0 108 46 27 0 1630688 1 0 0
   11       0 sr0 291 0 75108 68 0 0 0 0 0 156 68 0 0 0 0 0 0";
-        let result = ProcDiskStats::parse_proc_diskstats(proc_diskstats);
+        let result = ProcDiskStats::parse_proc_diskstats(proc_diskstats).unwrap();
         assert_eq!(result, ProcDiskStats {
             disk_stats: vec![
                 DiskStats { block_major: 7, block_minor: 0, device_name: "loop0".to_string(), reads_completed_success: 11, reads_merged: 0, reads_sectors: 28, reads_time_spent_ms: 0, writes_completed_success: 0, writes_merged: 0, writes_sectors: 0, writes_time_spent_ms: 0, ios_in_progress: 0, ios_time_spent_ms: 4, ios_weighted_time_spent_ms: 0, discards_completed_success: Some(0), discards_merged: Some(0), discards_sectors: Some(0), discards_time_spent_ms: Some(0), flush_requests_completed_success: Some(0), flush_requests_time_spent_ms: Some(0) },
@@ -312,7 +340,7 @@ mod tests {
 
         create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
         write(format!("{}/diskstats", test_path), proc_diskstats).expect(format!("Error writing to {}/diskstats", test_path).as_str());
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcDiskStats { disk_stats: vec![
@@ -342,7 +370,7 @@ mod tests {
 
         create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
         write(format!("{}/diskstats", test_path), proc_diskstats).expect(format!("Error writing to {}/diskstats", test_path).as_str());
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcDiskStats { disk_stats: vec![

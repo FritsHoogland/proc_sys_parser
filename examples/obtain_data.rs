@@ -4,6 +4,9 @@ use proc_sys_parser::diskstats;
 use proc_sys_parser::net_dev;
 use proc_sys_parser::meminfo;
 use proc_sys_parser::block;
+use proc_sys_parser::vmstat;
+use proc_sys_parser::loadavg;
+use proc_sys_parser::pressure;
 
 fn main()
 {
@@ -24,4 +27,13 @@ fn main()
 
     let block = block::read();
     println!("{:?}", block);
+
+    let vmstat = vmstat::read();
+    println!("{:?}", vmstat);
+
+    let loadavg = loadavg::read();
+    println!("{:?}", loadavg);
+
+    let pressure = pressure::read();
+    println!("{:?}", pressure);
 }

@@ -47,12 +47,13 @@ default, use:
 ```no_run
 use proc_sys_parser::{stat, stat::{ProcStat, CpuStat, Builder}};
 
-let proc_stat = Builder::new().file_name("/myproc/stat").read();
+let proc_stat = Builder::new().path("/myproc").read();
 ```
 
 */
 use nix::unistd::{sysconf, SysconfVar};
 use std::fs::read_to_string;
+use crate::ProcSysParserError;
 use log::warn;
 
 
@@ -109,15 +110,14 @@ impl Builder {
         self.proc_file = proc_file.to_string();
         self
     }
-    pub fn read(self) -> ProcStat {
+    pub fn read(self) -> Result<ProcStat, ProcSysParserError> {
         ProcStat::read_proc_stat(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
 /// The main function for building a [`ProcStat`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> ProcStat
-{
+pub fn read() -> Result<ProcStat, ProcSysParserError> {
    Builder::new().read()
 }
 
@@ -139,87 +139,74 @@ impl ProcStat {
     pub fn new() -> ProcStat {
         ProcStat::default() 
     }
-    pub fn parse_proc_stat_output(
-        proc_stat: &str,
-    ) -> ProcStat
-    {
+    pub fn parse_proc_stat_output(proc_stat: &str,) -> Result<ProcStat, ProcSysParserError> {
         let mut procstat = ProcStat::new();
-        for line in proc_stat.lines()
-        {
-            match line
-            {
+        for line in proc_stat.lines() {
+            match line {
                 line if line.starts_with("cpu ") => {
-                    procstat.cpu_total = CpuStat::generate_cpu_times(line);
+                    procstat.cpu_total = CpuStat::generate_cpu_times(line)?;
                 },
                 line if line.starts_with("cpu") && line.chars().nth(3) != Some(' ') => {
-                    procstat.cpu_individual.push(CpuStat::generate_cpu_times(line));
+                    procstat.cpu_individual.push(CpuStat::generate_cpu_times(line)?);
                 },
                 line if line.starts_with("intr ") => {
-                    procstat.interrupts = ProcStat::generate_number_vector(line);
+                    procstat.interrupts = ProcStat::generate_number_vector(line)?;
                 },
                 line if line.starts_with("ctxt ") => {
-                    procstat.context_switches = ProcStat::generate_number_unsigned(line);
+                    procstat.context_switches = ProcStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("btime ") => {
-                    procstat.boot_time = ProcStat::generate_number_unsigned(line);
+                    procstat.boot_time = ProcStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("processes ") => {
-                    procstat.processes = ProcStat::generate_number_unsigned(line);
+                    procstat.processes = ProcStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("procs_running ") => {
-                    procstat.processes_running = ProcStat::generate_number_unsigned(line);
+                    procstat.processes_running = ProcStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("procs_blocked ") => {
-                    procstat.processes_blocked = ProcStat::generate_number_unsigned(line);
+                    procstat.processes_blocked = ProcStat::generate_number_unsigned(line)?;
                 },
                 line if line.starts_with("softirq ") => {
-                    procstat.softirq = ProcStat::generate_number_vector(line);
+                    procstat.softirq = ProcStat::generate_number_vector(line)?;
                 },
                 _  => warn!("stat: unknown entry found: {}", line),
             }
         }
-        procstat
+        Ok(procstat)
     }
-    fn generate_number_vector(proc_stat_line: &str) -> Vec<u64>
-    {
-        proc_stat_line.split_whitespace()
+    fn generate_number_vector(proc_stat_line: &str) -> Result<Vec<u64>, ProcSysParserError> {
+        Ok(proc_stat_line.split_whitespace()
             .skip(1)
-            .map(|number| number.parse::<u64>().unwrap())
-            .collect()
+            .map(|row| row.parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?)
     }
-    fn generate_number_unsigned(proc_stat_line: &str) -> u64
-    {
-        proc_stat_line.split_whitespace()
-            .skip(1)
-            .map(|number| number.parse::<u64>().unwrap())
-            .next()
-            .unwrap()
+    fn generate_number_unsigned(proc_stat_line: &str) -> Result<u64, ProcSysParserError> {
+        Ok(proc_stat_line.split_whitespace()
+            .nth(1)
+            .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_number_unsigned".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
     }
-    pub fn read_proc_stat(proc_stat_file: &str) -> ProcStat
-    {
-        //let proc_stat_file = proc_stat_file.unwrap_or("/proc/stat");
-        let proc_stat_output = read_to_string(proc_stat_file).unwrap_or_else(|error|panic!("Error {} reading file: {}", error, proc_stat_file));
+    pub fn read_proc_stat(proc_stat_file: &str) -> Result<ProcStat, ProcSysParserError> {
+        let proc_stat_output = read_to_string(proc_stat_file)
+            .map_err(|error| ProcSysParserError::FileReadError { file: proc_stat_file.to_string(), error })?;
         ProcStat::parse_proc_stat_output(&proc_stat_output)
     }
 }
 
 impl CpuStat {
-    //fn new() -> CpuStat {
-    //    CpuStat::default()
-    //}
-    pub fn generate_cpu_times(proc_stat_cpu_line: &str) -> CpuStat
-    {
+    pub fn generate_cpu_times(proc_stat_cpu_line: &str) -> Result<CpuStat, ProcSysParserError> {
         // Note: time in jiffies, must be divided by CLK_TCK to show time in seconds.
         // CLK_TCK is set by CONFIG_HZ and is 100 on most enterprise linuxes.
         let clock_time = sysconf(SysconfVar::CLK_TCK).unwrap_or(Some(100)).unwrap_or(100) as u64;
 
         let parse_next_and_conversion_into_option_milliseconds = |result: Option<&str>, clock_time: u64 | -> Option<u64> {
-            match result
-            {
+            match result {
                 None => None,
                 Some(value) => {
-                    match value.parse::<u64>()
-                    {
+                    match value.parse::<u64>() {
                         Err(_) => None,
                         Ok(number) => Some((number*1000_u64)/clock_time),
                     }
@@ -228,19 +215,29 @@ impl CpuStat {
         };
 
         let mut splitted = proc_stat_cpu_line.split_whitespace();
-        CpuStat {
-            name: splitted.next().unwrap().to_string(),
-            user: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            nice: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            system: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
-            idle: ((splitted.next().unwrap().parse::<u64>().unwrap()*1000_u64)/clock_time),
+        Ok(CpuStat {
+            name: splitted.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times name".to_string() })?
+                .to_string(),
+            user: ((splitted.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times user".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+            nice: ((splitted.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times nice".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+            system: ((splitted.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times system".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+            idle: ((splitted.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times idle".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
             iowait: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             irq: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             softirq: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             steal: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             guest: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             guest_nice: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
-        }
+        })
     }
 }
 
@@ -258,7 +255,7 @@ mod tests {
     #[test]
     fn parse_cpu_line() {
         let cpu_line = "cpu  101521 47 66467 43586274 7651 0 1367 0 0 0";
-        let result = CpuStat::generate_cpu_times(&cpu_line);
+        let result = CpuStat::generate_cpu_times(&cpu_line).unwrap();
         assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:Some(76510), irq:Some(0), softirq:Some(13670), steal:Some(0), guest:Some(0), guest_nice:Some(0) });
     }
 
@@ -267,7 +264,7 @@ mod tests {
     #[test]
     fn parse_cpu_line_with_less_statistics() {
         let cpu_line = "cpu  101521 47 66467 43586274";
-        let result = CpuStat::generate_cpu_times(&cpu_line);
+        let result = CpuStat::generate_cpu_times(&cpu_line).unwrap();
         assert_eq!(result, CpuStat { name:"cpu".to_string(), user:1015210, nice:470, system:664670, idle:435862740, iowait:None, irq:None, softirq:None, steal:None, guest:None, guest_nice:None });
     }
 
@@ -275,14 +272,14 @@ mod tests {
     #[test]
     fn parse_interrupt_line() {
         let interrupt_line = "intr 21965856 0 520030 7300523 0 0 0 2 0 0 0 12267292 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 644 0 0 0 0 0 2 0 77822 81889 80164 70697 68349 79207 0 0 0 6172 6117 6131 5983 6483 6062 0 588204 437602 0 0 1202 0 0 0 0 0 0 0 0 0 0 0 355279 0 0";
-        let result = ProcStat::generate_number_vector(&interrupt_line);
+        let result = ProcStat::generate_number_vector(&interrupt_line).unwrap();
         assert_eq!(result, vec![21965856, 0, 520030, 7300523, 0, 0, 0, 2, 0, 0, 0, 12267292, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 644, 0, 0, 0, 0, 0, 2, 0, 77822, 81889, 80164, 70697, 68349, 79207, 0, 0, 0, 6172, 6117, 6131, 5983, 6483, 6062, 0, 588204, 437602, 0, 0, 1202, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 355279, 0, 0]);
     }
 
     #[test]
     fn parse_context_switches_line() {
         let context_switches_line = "ctxt 36432936";
-        let result = ProcStat::generate_number_unsigned(context_switches_line);
+        let result = ProcStat::generate_number_unsigned(context_switches_line).unwrap();
         assert_eq!(result, 36432936);
 
     }
@@ -303,7 +300,7 @@ processes 345159
 procs_running 1
 procs_blocked 0
 softirq 7616206 32 1416021 213 1102885 11 0 1409 2270709 0 2824926";
-        let result = ProcStat::parse_proc_stat_output(proc_stat);
+        let result = ProcStat::parse_proc_stat_output(proc_stat).unwrap();
         assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 1015210, nice: 470, system: 664670, idle: 435862740, iowait: Some(76510), irq: Some(0), softirq: Some(13670), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
             cpu_individual: vec![CpuStat { name: "cpu0".to_string(), user: 162980, nice: 0, system: 115900, idle: 72592620, iowait: Some(12130), irq: Some(0), softirq: Some(8460), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
                                  CpuStat { name: "cpu1".to_string(), user: 162720, nice: 0, system: 112910, idle: 72656150, iowait: Some(12890), irq: Some(0), softirq: Some(1100), steal: Some(0), guest: Some(0), guest_nice: Some(0) },
@@ -338,7 +335,7 @@ softirq 100 0 1 1";
         create_dir_all(test_path.clone()).expect("Error creating mock sysfs directories.");
         
         write(format!("{}/stat", test_path), proc_stat).expect(format!("Error writing to {}/stat", test_path).as_str());
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcStat { cpu_total: CpuStat { name: "cpu".to_string(), user: 10, nice: 10, system: 10, idle: 10, iowait: Some(10), irq: Some(0), softirq: Some(10), steal: Some(0), guest: Some(0), guest_nice: Some(0) },

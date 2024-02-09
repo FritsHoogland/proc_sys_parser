@@ -327,6 +327,44 @@ SysBlock {
 (edited for readability)
  */
 
+use std::num::{ParseFloatError, ParseIntError};
+
+use thiserror::Error;
+//use anyhow::Result;
+//use color_eyre::eyre::Result;
+
+#[derive(Error, Debug)]
+pub enum ProcSysParserError {
+    /// This error shouldn't happen, unless the source data has changed 
+    #[error("Expected item is not found on iterator: {item}.")]
+    IteratorItemError { item: String },
+    /// This error shouldn't happen, unless the source data has changed 
+    #[error("Expected character cannot be found: {item}.")]
+    FindItemError { item: String },
+    /// This error means a string that is picked up and expected to be a float cannot be parsed
+    /// into a float.
+    #[error("Error during parsing string to float")]
+    ParseToFloatError(#[from] ParseFloatError),
+    /// This error means a string that is picked up and expected to be an integer cannot be parsed
+    /// into an integer.
+    #[error("Error during parsing string to integer")]
+    ParseToIntegerError(#[from] ParseIntError),
+    /// This error means the file to be read cannot be found or is unreadable.
+    #[error("Error {error} during reading file {file}.")]
+    FileReadError { file: String, error: std::io::Error },
+    /// This error means the file to be read cannot be found or is unreadable.
+    #[error("Error {error} during reading directory {directory}.")]
+    DirectoryReadError { directory: String, error: std::io::Error },
+}
+
+/*
+impl From<ParseFloatError> for ProcSysParserError {
+    fn from(e: <ParseFloatError as TryFrom>::Error) -> Self {
+        ProcSysParserError::ParseToNumberError
+    }
+}
+*/
+
 pub mod block;
 pub mod diskstats;
 pub mod loadavg;

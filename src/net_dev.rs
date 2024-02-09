@@ -27,11 +27,12 @@ by default, use:
 ```no_run
 use proc_sys_parser::{net_dev, net_dev::{ProcNetDev, Builder}};
 
-let proc_net_dev = Builder::new().file_name("/myproc/net/dev").read();
+let proc_net_dev = Builder::new().path("/myproc").read();
 ```
 
 */
 use std::fs::read_to_string;
+use crate::ProcSysParserError;
 
 /// Struct for holding `/proc/net/dev` statistics
 #[derive(Debug, PartialEq, Default)]
@@ -41,49 +42,41 @@ pub struct ProcNetDev {
 
 /// Builder pattern for [`ProcNetDev`]
 #[derive(Default)]
-pub struct Builder
-{
+pub struct Builder {
     pub proc_path : String,
     pub proc_file : String,
 }
 
-impl Builder
-{
-    pub fn new() -> Builder
-    {
+impl Builder {
+    pub fn new() -> Builder {
         Builder { 
             proc_path: "/proc".to_string(),
             proc_file: "net/dev".to_string(),
         }
     }
 
-    pub fn path(mut self, proc_path: &str) -> Builder
-    {
+    pub fn path(mut self, proc_path: &str) -> Builder {
         self.proc_path = proc_path.to_string();
         self
     }
-    pub fn file(mut self, proc_file: &str) -> Builder
-    {
+    pub fn file(mut self, proc_file: &str) -> Builder {
         self.proc_file = proc_file.to_string();
         self
     }
-    pub fn read(self) -> ProcNetDev
-    {
+    pub fn read(self) -> Result<ProcNetDev, ProcSysParserError> {
         ProcNetDev::read_proc_net_dev(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
 /// The main function for building a [`ProcNetDev`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> ProcNetDev
-{
+pub fn read() -> Result<ProcNetDev, ProcSysParserError> {
    Builder::new().read()
 }
 
 /// Struct for holding statistics of individual network interfaces
 #[derive(Debug, PartialEq)]
-pub struct InterfaceStats
-{
+pub struct InterfaceStats {
     pub name: String,
     pub receive_bytes: u64,
     pub receive_packets: u64,
@@ -107,51 +100,78 @@ impl ProcNetDev {
     pub fn new() -> ProcNetDev {
         ProcNetDev::default()
     }
-    pub fn parse_proc_net_dev(
-        proc_net_dev: &str,
-    ) -> ProcNetDev
-    {
+    pub fn parse_proc_net_dev(proc_net_dev: &str,) -> Result<ProcNetDev, ProcSysParserError> {
         let mut procnetdev = ProcNetDev::new();
-        for line in proc_net_dev.lines()
-        {
-            match line
-            {
+        for line in proc_net_dev.lines() {
+            match line {
                 line if line.starts_with("Inter-|   Receive") => continue,
                 line if line.starts_with(" face |bytes") => continue,
-                line => {
-                    procnetdev.interface.push(ProcNetDev::parse_proc_net_dev_line(line));
-                }
+                line => procnetdev.interface.push(ProcNetDev::parse_proc_net_dev_line(line)?),
             }
         }
-        procnetdev
+        Ok(procnetdev)
     }
-    fn parse_proc_net_dev_line(proc_net_dev_line: &str) -> InterfaceStats
-    {
+    fn parse_proc_net_dev_line(proc_net_dev_line: &str) -> Result<InterfaceStats, ProcSysParserError> {
         let mut fields = proc_net_dev_line.split_whitespace();
 
-        InterfaceStats {
-            name: fields.next().unwrap().trim_end_matches(':').to_string(),
-            receive_bytes: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_packets: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_errors: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_drop: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_fifo: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_frame: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_compressed: fields.next().unwrap().parse::<u64>().unwrap(),
-            receive_multicast: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_bytes: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_packets: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_errors: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_drop: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_fifo: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_collisions: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_carrier: fields.next().unwrap().parse::<u64>().unwrap(),
-            transmit_compressed: fields.next().unwrap().parse::<u64>().unwrap(),
-        }
+        Ok(InterfaceStats {
+            name: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev name".to_string() })?
+                .trim_end_matches(':')
+                .to_string(),
+            receive_bytes: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_bytes".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_packets: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_packets".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_errors: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_errors".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_drop: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_drop".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_fifo: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_fifo".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_frame: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_frame".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_compressed: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_compressed".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            receive_multicast: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_multicast".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_bytes: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_bytes".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_packets: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_packets".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_errors: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_errors".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_drop: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_drop".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_fifo: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_fifo".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_collisions: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_collisions".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_carrier: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_carrier".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+            transmit_compressed: fields.next()
+                .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_compressed".to_string() })?
+                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+        })
     }
-    pub fn read_proc_net_dev(proc_net_dev_file: &str) -> ProcNetDev
-    {
-        let proc_net_dev_output = read_to_string(proc_net_dev_file).unwrap_or_else(|error| panic!("Error {} reading file: {}", error, proc_net_dev_file));
+    pub fn read_proc_net_dev(proc_net_dev_file: &str) -> Result<ProcNetDev, ProcSysParserError> {
+        let proc_net_dev_output = read_to_string(proc_net_dev_file)
+            .map_err(|error| ProcSysParserError::FileReadError { file: proc_net_dev_file.to_string(), error })?;
         ProcNetDev::parse_proc_net_dev(&proc_net_dev_output)
     }
 }
@@ -166,7 +186,7 @@ mod tests {
     #[test]
     fn parse_proc_netdev_valid_line() {
         let netdev_line = "  eth0: 151012532   16720    0    0    0     0          0         0   816228   12257    0    0    0     0       0          0";
-        let result = ProcNetDev::parse_proc_net_dev_line(&netdev_line);
+        let result = ProcNetDev::parse_proc_net_dev_line(&netdev_line).unwrap();
         assert_eq!(result, InterfaceStats {
             name: "eth0".to_string(), receive_bytes: 151012532, receive_packets: 16720, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
         );
@@ -174,7 +194,7 @@ mod tests {
     #[test]
     fn parse_proc_netdev_invalid_line() {
         let netdev_line = "Inter-|   Receive                                                |  Transmit";
-        let result = ProcNetDev::parse_proc_net_dev(&netdev_line);
+        let result = ProcNetDev::parse_proc_net_dev(&netdev_line).unwrap();
         assert_eq!(result, ProcNetDev { interface: vec![] });
     }
 
@@ -184,7 +204,7 @@ mod tests {
  face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
   eth0: 151013652   16736    0    0    0     0          0         0   816228   12257    0    0    0     0       0          0";
-        let result = ProcNetDev::parse_proc_net_dev(proc_netdev);
+        let result = ProcNetDev::parse_proc_net_dev(proc_netdev).unwrap();
         assert_eq!(result, ProcNetDev { interface:
         vec![InterfaceStats { name: "lo".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
              InterfaceStats { name: "eth0".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
@@ -203,7 +223,7 @@ mod tests {
         create_dir_all(format!("{}/net", test_path)).expect("Error creating mock directory.");
 
         write(format!("{}/net/dev", test_path), proc_netdev).expect(format!("Error writing to {}/net/dev", test_path).as_str());
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcNetDev { interface:

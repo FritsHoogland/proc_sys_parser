@@ -79,11 +79,12 @@ by default, use:
 ```no_run
 use proc_sys_parser::{meminfo, meminfo::{ProcMemInfo, Builder}};
 
-let proc_meminfo = Builder::new().file_name("/myproc/meminfo").read();
+let proc_meminfo = Builder::new().path("/myproc").read();
 ```
 
 */
 use std::fs::read_to_string;
+use crate::ProcSysParserError;
 use log::warn;
 
 /// Struct for holding `/proc/meminfo` statistics
@@ -172,14 +173,14 @@ impl Builder {
         self.proc_file = proc_file.to_string();
         self
     }
-    pub fn read(self) -> ProcMemInfo {
+    pub fn read(self) -> Result<ProcMemInfo, ProcSysParserError> {
         ProcMemInfo::read_proc_meminfo(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
     }
 }
 
 /// The main function for building a [`ProcMemInfo`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> ProcMemInfo {
+pub fn read() -> Result<ProcMemInfo, ProcSysParserError> {
     Builder::new().read()
 }
 
@@ -187,197 +188,195 @@ impl ProcMemInfo {
     pub fn new() -> ProcMemInfo {
         ProcMemInfo::default()
     }
-    pub fn parse_proc_meminfo_output(proc_meminfo: &str) -> ProcMemInfo {
+    pub fn parse_proc_meminfo_output(proc_meminfo: &str) -> Result<ProcMemInfo, ProcSysParserError> {
         let mut procmeminfo = ProcMemInfo::new();
         for line in proc_meminfo.lines() {
             match line {
                 line if line.starts_with("MemTotal:") => {
-                    procmeminfo.memtotal = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.memtotal = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("MemFree:") => {
-                    procmeminfo.memfree = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.memfree = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("MemAvailable:") => {
-                    procmeminfo.memavailable = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.memavailable = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Buffers:") => {
-                    procmeminfo.buffers = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.buffers = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Cached:") => {
-                    procmeminfo.cached = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.cached = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("SwapCached:") => {
-                    procmeminfo.swapcached = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.swapcached = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Active:") => {
-                    procmeminfo.active = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.active = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Inactive:") => {
-                    procmeminfo.inactive = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.inactive = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Active(anon):") => {
-                    procmeminfo.active_anon = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.active_anon = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Inactive(anon):") => {
-                    procmeminfo.inactive_anon = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.inactive_anon = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Active(file):") => {
-                    procmeminfo.active_file = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.active_file = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Inactive(file):") => {
-                    procmeminfo.inactive_file = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.inactive_file = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Unevictable:") => {
-                    procmeminfo.unevictable = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.unevictable = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Mlocked:") => {
-                    procmeminfo.mlocked = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.mlocked = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("SwapTotal:") => {
-                    procmeminfo.swaptotal = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.swaptotal = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("SwapFree:") => {
-                    procmeminfo.swapfree = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.swapfree = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Zswap:") => {
-                    procmeminfo.zswap = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.zswap = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Zswapped:") => {
-                    procmeminfo.zswapped = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.zswapped = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Dirty:") => {
-                    procmeminfo.dirty = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.dirty = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Writeback:") => {
-                    procmeminfo.writeback = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.writeback = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("AnonPages:") => {
-                    procmeminfo.anonpages = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.anonpages = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Mapped:") => {
-                    procmeminfo.mapped = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.mapped = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Shmem:") => {
-                    procmeminfo.shmem = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.shmem = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("KReclaimable:") => {
-                    procmeminfo.kreclaimable = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.kreclaimable = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Slab:") => {
-                    procmeminfo.slab = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.slab = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("SReclaimable:") => {
-                    procmeminfo.sreclaimable = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.sreclaimable = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("SUnreclaim:") => {
-                    procmeminfo.sunreclaim = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.sunreclaim = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("KernelStack:") => {
-                    procmeminfo.kernelstack = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.kernelstack = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("ShadowCallStack:") => {
-                    procmeminfo.shadowcallstack = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.shadowcallstack = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("PageTables:") => {
-                    procmeminfo.pagetables = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.pagetables = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("SecPageTables:") => {
-                    procmeminfo.secpagetables = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.secpagetables = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("NFS_Unstable:") => {
-                    procmeminfo.nfs_unstable = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.nfs_unstable = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Bounce:") => {
-                    procmeminfo.bounce = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.bounce = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("WritebackTmp:") => {
-                    procmeminfo.writebacktmp = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.writebacktmp = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("CommitLimit:") => {
-                    procmeminfo.commitlimit = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.commitlimit = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Committed_AS:") => {
-                    procmeminfo.committed_as = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.committed_as = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("VmallocTotal:") => {
-                    procmeminfo.vmalloctotal = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.vmalloctotal = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("VmallocUsed:") => {
-                    procmeminfo.vmallocused = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.vmallocused = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("VmallocChunk:") => {
-                    procmeminfo.vmallocchunk = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.vmallocchunk = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Percpu:") => {
-                    procmeminfo.percpu = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.percpu = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("HardwareCorrupted:") => {
-                    procmeminfo.hardwarecorrupted = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hardwarecorrupted = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("AnonHugePages:") => {
-                    procmeminfo.anonhugepages = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.anonhugepages = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("ShmemHugePages:") => {
-                    procmeminfo.shmemhugepages = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.shmemhugepages = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("ShmemPmdMapped:") => {
-                    procmeminfo.shmempmdmapped = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.shmempmdmapped = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("FileHugePages:") => {
-                    procmeminfo.filehugepages = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.filehugepages = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("FilePmdMapped:") => {
-                    procmeminfo.filepmdmapped = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.filepmdmapped = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("CmaTotal:") => {
-                    procmeminfo.cmatotal = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.cmatotal = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("CmaFree:") => {
-                    procmeminfo.cmafree = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.cmafree = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("HugePages_Total:") => {
-                    procmeminfo.hugepages_total = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hugepages_total = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("HugePages_Free:") => {
-                    procmeminfo.hugepages_free = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hugepages_free = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("HugePages_Rsvd:") => {
-                    procmeminfo.hugepages_rsvd = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hugepages_rsvd = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("HugePages_Surp:") => {
-                    procmeminfo.hugepages_surp = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hugepages_surp = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Hugepagesize:") => {
-                    procmeminfo.hugepagesize = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hugepagesize = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 line if line.starts_with("Hugetlb:") => {
-                    procmeminfo.hugetlb = ProcMemInfo::parse_proc_meminfo_line(line)
+                    procmeminfo.hugetlb = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
                 // Found on EL7
                 line if line.starts_with("DirectMap4k:") => {
-                    procmeminfo.directmap4k = Some(ProcMemInfo::parse_proc_meminfo_line(line))
+                    procmeminfo.directmap4k = Some(ProcMemInfo::parse_proc_meminfo_line(line)?)
                 }
                 // Found on EL7
                 line if line.starts_with("DirectMap2M:") => {
-                    procmeminfo.directmap2m = Some(ProcMemInfo::parse_proc_meminfo_line(line))
+                    procmeminfo.directmap2m = Some(ProcMemInfo::parse_proc_meminfo_line(line)?)
                 }
                 _ => warn!("meminfo: unknown entry found: {}", line),
             }
         }
-        procmeminfo
+        Ok(procmeminfo)
     }
-    fn parse_proc_meminfo_line(proc_meminfo_line: &str) -> u64 {
-        proc_meminfo_line
+    fn parse_proc_meminfo_line(proc_meminfo_line: &str) -> Result<u64, ProcSysParserError> {
+        Ok(proc_meminfo_line
             .split_whitespace()
-            .skip(1)
-            .map(|number| number.parse::<u64>().unwrap())
-            .nth(0)
-            .unwrap_or(0)
+            .nth(1)
+            .ok_or(ProcSysParserError::IteratorItemError {item: "meminfo parse_proc_meminfo".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
     }
-    pub fn read_proc_meminfo(proc_meminfo_file: &str) -> ProcMemInfo {
-        //let proc_stat_file = proc_stat_file.unwrap_or("/proc/stat");
+    pub fn read_proc_meminfo(proc_meminfo_file: &str) -> Result<ProcMemInfo, ProcSysParserError> {
         let proc_meminfo_output = read_to_string(proc_meminfo_file)
-            .unwrap_or_else(|error| panic!("Error {} reading file: {}", error, proc_meminfo_file));
+            .map_err(|error| ProcSysParserError::FileReadError { file: proc_meminfo_file.to_string(), error })?;
         ProcMemInfo::parse_proc_meminfo_output(&proc_meminfo_output)
     }
 }
@@ -392,7 +391,7 @@ mod tests {
     #[test]
     fn parse_meminfo_line() {
         let meminfo_line = "MemTotal:        3997876 kB";
-        let result = ProcMemInfo::parse_proc_meminfo_line(&meminfo_line);
+        let result = ProcMemInfo::parse_proc_meminfo_line(&meminfo_line).unwrap();
         assert_eq!(result, 3997876_u64);
     }
 
@@ -452,7 +451,7 @@ HugePages_Rsvd:        0
 HugePages_Surp:        0
 Hugepagesize:       2048 kB
 Hugetlb:               0 kB";
-        let result = ProcMemInfo::parse_proc_meminfo_output(proc_meminfo);
+        let result = ProcMemInfo::parse_proc_meminfo_output(proc_meminfo).unwrap();
         assert_eq!(
             result,
             ProcMemInfo {
@@ -582,7 +581,7 @@ Hugetlb:               0 kB";
 
         write(format!("{}/meminfo", test_path), proc_meminfo)
             .expect(format!("Error writing to {}/meminfo", test_path).as_str());
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
 
         remove_dir_all(test_path).unwrap();
 

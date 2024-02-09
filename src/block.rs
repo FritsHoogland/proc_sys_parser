@@ -114,6 +114,7 @@ let proc_block = Builder::new().path("/my-sys/block").read();
 ```
 */
 use std::fs::{read_to_string, read_dir, DirEntry};
+use crate::ProcSysParserError;
 
 /// Struct for holding `/sys/block` block device statistics and information
 #[derive(Debug, PartialEq, Default)]
@@ -127,8 +128,7 @@ pub struct Builder {
     pub sys_path : String,
 }
 
-impl Builder
-{
+impl Builder {
     pub fn new() -> Builder {
         Builder { 
             sys_path: "/sys".to_string() 
@@ -139,16 +139,14 @@ impl Builder
         self
     }
 
-    pub fn read(self) -> SysBlock
-    {
+    pub fn read(self) -> Result<SysBlock, ProcSysParserError> {
         SysBlock::read_sys_block_devices(format!("{}/block", self.sys_path).as_str())
     }
 }
 
 /// The main function for building a [`SysBlock`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
-pub fn read() -> SysBlock
-{
+pub fn read() -> Result<SysBlock, ProcSysParserError> {
    Builder::new().read()
 }
 
@@ -384,10 +382,8 @@ pub struct BlockDevice {
     pub stat_flush_requests_time_spent_ms: Option<u64>,
 }
 
-impl BlockDevice
-{
-    pub fn new() -> BlockDevice
-    {
+impl BlockDevice {
+    pub fn new() -> BlockDevice {
         BlockDevice::default()
     }
 }
@@ -399,44 +395,52 @@ impl SysBlock {
     fn parse_dev(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
-    )
-    {
-        let dev_contents = read_to_string(blockdevice_dir.path().join("dev")).unwrap_or_else(|error| panic!("Error {} reading block device dev sysfs entry", error)).trim_end_matches('\n').to_string();
+    ) -> Result<(), ProcSysParserError> {
+        //let dev_contents = read_to_string(blockdevice_dir.path().join("dev")).unwrap_or_else(|error| panic!("Error {} reading block device dev sysfs entry", error)).trim_end_matches('\n').to_string();
+        let dev_contents = read_to_string(blockdevice_dir.path().join("dev"))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join("dev").to_string_lossy().to_string(), error})?
+            .trim_end_matches('\n').to_string();
         let mut fields = dev_contents.split(':');
-        blockdevice_data.dev_block_major = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.dev_block_minor = fields.next().unwrap().parse::<u64>().unwrap();
+        blockdevice_data.dev_block_major = fields.next().ok_or(ProcSysParserError::IteratorItemError { item: "block parse_dev major".to_string() })?
+                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.dev_block_minor = fields.next().ok_or(ProcSysParserError::IteratorItemError { item: "block parse_dev minor".to_string() })?
+                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        Ok(())
     }
     fn parse_inflight(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
-    )
-    {
-        let inflight_from_file = read_to_string(blockdevice_dir.path().join("inflight")).unwrap_or_else(|error| panic!("Error {} reading block device inflight sysfs entry", error)).trim_end_matches('\n').to_string();
-        blockdevice_data.inflight_reads = inflight_from_file.split_whitespace().nth(0).unwrap().parse::<u64>().unwrap();
-        blockdevice_data.inflight_writes = inflight_from_file.split_whitespace().nth(1).unwrap().parse::<u64>().unwrap();
+    ) -> Result<(), ProcSysParserError> {
+        let inflight_from_file = read_to_string(blockdevice_dir.path().join("inflight"))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join("inflight").to_string_lossy().to_string(), error})?
+            .trim_end_matches('\n').to_string();
+        blockdevice_data.inflight_reads = inflight_from_file.split_whitespace().nth(0).ok_or(ProcSysParserError::IteratorItemError { item: "block parse_inflight reads".to_string() })?
+                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.inflight_writes = inflight_from_file.split_whitespace().nth(1).ok_or(ProcSysParserError::IteratorItemError { item: "block parse_inflight writes".to_string() })?
+                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        Ok(())
     }
     fn parse_queue_scheduler(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
-    )
-    {
-        let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("scheduler")).unwrap_or_else(|error| panic!("Error {} reading block device queue/scheduler sysfs entry", error)).trim_end_matches('\n').to_string();
+    ) -> Result<(), ProcSysParserError> {
+        let nr_requests = read_to_string(blockdevice_dir.path().join("queue").join("scheduler"))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join("queue").join("scheduler").to_string_lossy().to_string(), error })?
+            .trim_end_matches('\n').to_string();
         let left_bracket = nr_requests.find('[');
         let right_bracket = nr_requests.find(']');
-        if left_bracket.is_some() && right_bracket.is_some()
-        {
-            blockdevice_data.queue_scheduler = nr_requests[left_bracket.unwrap()+1..right_bracket.unwrap()].to_string();
-        }
-        else
-        {
+
+        if left_bracket.is_some() && right_bracket.is_some() {
+            blockdevice_data.queue_scheduler = nr_requests[left_bracket.ok_or(ProcSysParserError::FindItemError { item: "block parse_queue_scheduler '['".to_string() })?+1..right_bracket.ok_or(ProcSysParserError::FindItemError { item: "block parse_queue_scheduler ']'".to_string() })?].to_string();
+        } else {
             blockdevice_data.queue_scheduler = "?".to_string();
         }
+        Ok(())
     }
     fn parse_stat(
         blockdevice_data: &mut BlockDevice,
         blockdevice_dir: &DirEntry,
-    )
-    {
+    ) -> Result<(), ProcSysParserError> {
         let parse_next_and_conversion_into_option_u64 = |result: Option<&str>| -> Option<u64> {
             match result {
                 None => None,
@@ -449,143 +453,171 @@ impl SysBlock {
             }
         };
 
-        let stat_contents = read_to_string(blockdevice_dir.path().join("stat")).unwrap_or_else(|error| panic!("Error {} reading block device stat sysfs entry", error)).trim_end_matches('\n').to_string();
-        let mut fields = stat_contents.split_whitespace();
-        blockdevice_data.stat_reads_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_reads_merged = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_reads_sectors = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_reads_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_completed_success = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_merged = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_sectors = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_writes_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_ios_in_progress = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_ios_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_ios_weighted_time_spent_ms = fields.next().unwrap().parse::<u64>().unwrap();
-        blockdevice_data.stat_discards_completed_success = parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_discards_merged = parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_discards_sectors = parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_discards_time_spent_ms = parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_flush_requests_completed_success = parse_next_and_conversion_into_option_u64(fields.next());
-        blockdevice_data.stat_flush_requests_time_spent_ms = parse_next_and_conversion_into_option_u64(fields.next());
+        let stat_contents = read_to_string(blockdevice_dir.path().join("stat"))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join("stat").to_string_lossy().to_string(), error })?
+            .trim_end_matches('\n')
+            .to_string();
+        let mut stat_contents_splitted = stat_contents
+            .split_whitespace();
+
+        blockdevice_data.stat_reads_completed_success = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_completed_success".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_reads_merged = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_merged".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_reads_sectors = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_sectors".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_reads_time_spent_ms = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_time_spent_ms".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_writes_completed_success = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_completed_success".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_writes_merged = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_completed_success".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_writes_sectors = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_sectors".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_writes_time_spent_ms = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_time_spent_ms".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_ios_in_progress = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat ios_in_progress".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_ios_time_spent_ms = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat ios_time_spent_ms".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_ios_weighted_time_spent_ms = stat_contents_splitted.next()
+            .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat ios_weighted_time_spent_ms".to_string() })?
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.stat_discards_completed_success = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
+        blockdevice_data.stat_discards_merged = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
+        blockdevice_data.stat_discards_sectors = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
+        blockdevice_data.stat_discards_time_spent_ms = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
+        blockdevice_data.stat_flush_requests_completed_success = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
+        blockdevice_data.stat_flush_requests_time_spent_ms = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
+        Ok(())
     }
     fn parse_contents_file_u64(
         file: &str,
         blockdevice_dir: &DirEntry,
-    ) -> u64
-    {
-        read_to_string(blockdevice_dir.path().join(file))
-            .unwrap_or_else(|error| panic!("Error {} reading sysfs entry: {:?}", error, blockdevice_dir.path().join(file)))
+    ) -> Result<u64, ProcSysParserError> {
+        Ok(
+            read_to_string(blockdevice_dir.path().join(file))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
             .trim_end_matches('\n')
             .to_string()
-            .parse::<u64>()
-            .unwrap()
+            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?
+        )
     }
     fn parse_contents_file_i64(
         file: &str,
         blockdevice_dir: &DirEntry,
-    ) -> i64
-    {
-        read_to_string(blockdevice_dir.path().join(file))
-            .unwrap_or_else(|error| panic!("Error {} reading sysfs entry: {:?}", error, blockdevice_dir.path().join(file)))
+    ) -> Result<i64, ProcSysParserError> {
+        Ok(
+            read_to_string(blockdevice_dir.path().join(file))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
             .trim_end_matches('\n')
             .to_string()
-            .parse::<i64>()
-            .unwrap()
+            .parse::<i64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?
+        )
     }
     fn parse_contents_file_option_u64(
         file: &str,
         blockdevice_dir: &DirEntry,
-    ) -> Option<u64>
+    ) -> Result<Option<u64>, ProcSysParserError>
     {
         match read_to_string(blockdevice_dir.path().join(file)) {
             Ok(result) => {
-                Some(result
+                Ok(
+                    Some(result
                     .trim_end_matches('\n')
                     .to_string()
-                    .parse::<u64>()
-                    .unwrap())
+                    .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
+                )
             },
-            Err(_) => None,
+            Err(_) => Ok(None),
         }
     }
     fn parse_contents_file_option_string(
         file: &str,
         blockdevice_dir: &DirEntry,
-    ) -> Option<String>
-    {
-        match read_to_string(blockdevice_dir.path().join(file)) {
-            Ok(result) => Some(result.trim_end_matches('\n') .to_string()),
+    ) -> Result<Option<String>, ProcSysParserError> {
+        Ok(match read_to_string(blockdevice_dir.path().join(file)) {
+            Ok(result) => Some(result.trim_end_matches('\n').to_string()),
             Err(_) => None
-        }
+        })
     }
     fn parse_contents_file_string(
         file: &str,
         blockdevice_dir: &DirEntry,
-    ) -> String
-    {
-        read_to_string(blockdevice_dir.path().join(file))
-            .unwrap_or_else(|error| panic!("Error {} reading sysfs entry: {:?}", error, blockdevice_dir.path().join(file)))
+    ) -> Result <String, ProcSysParserError> {
+        Ok(read_to_string(blockdevice_dir.path().join(file))
+            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
             .trim_end_matches('\n')
-            .to_string()
+            .to_string())
     }
-    pub fn read_sys_block_devices(sys_block_path: &str) -> SysBlock {
+    pub fn read_sys_block_devices(sys_block_path: &str) -> Result<SysBlock, ProcSysParserError> {
         let mut sysblock = SysBlock::new();
 
-        let blockdevice_directories = read_dir(sys_block_path).unwrap_or_else(|error| panic!("Error {} reading sysfs for block devices in path: {}.", error, sys_block_path));
+        let blockdevice_directories = read_dir(sys_block_path)
+            .map_err(|error| ProcSysParserError::DirectoryReadError { directory: sys_block_path.to_string(), error })?;
 
         for blockdevice in blockdevice_directories {
             let directory_entry = blockdevice.unwrap_or_else(|error| panic!("Error {} reading block device sysfs entry", error));
             let mut blockdevice_data = BlockDevice::new();
 
             blockdevice_data.device_name = directory_entry.file_name().into_string().unwrap();
-            blockdevice_data.alignment_offset = SysBlock::parse_contents_file_u64("alignment_offset", &directory_entry);
-            blockdevice_data.cache_type = SysBlock::parse_contents_file_option_string("cache_type", &directory_entry);
-            SysBlock::parse_dev(&mut blockdevice_data, &directory_entry);
-            blockdevice_data.discard_alignment = SysBlock::parse_contents_file_u64("discard_alignment", &directory_entry);
-            blockdevice_data.diskseq = SysBlock::parse_contents_file_option_u64("diskseq", &directory_entry);
-            blockdevice_data.hidden = SysBlock::parse_contents_file_u64("hidden", &directory_entry);
-            SysBlock::parse_inflight(&mut blockdevice_data, &directory_entry);
-            blockdevice_data.queue_add_random = SysBlock::parse_contents_file_u64("queue/add_random", &directory_entry);
-            blockdevice_data.queue_chunk_sectors = SysBlock::parse_contents_file_option_u64("queue/chunk_sectors", &directory_entry);
-            blockdevice_data.queue_dax = SysBlock::parse_contents_file_u64("queue/dax", &directory_entry);
-            blockdevice_data.queue_discard_granularity = SysBlock::parse_contents_file_u64("queue/discard_granularity", &directory_entry);
-            blockdevice_data.queue_discard_max_bytes = SysBlock::parse_contents_file_u64("queue/discard_max_bytes", &directory_entry);
-            blockdevice_data.queue_discard_max_hw_bytes = SysBlock::parse_contents_file_u64("queue/discard_max_hw_bytes", &directory_entry);
-            blockdevice_data.queue_hw_sector_size = SysBlock::parse_contents_file_u64("queue/hw_sector_size", &directory_entry);
-            blockdevice_data.queue_io_poll = SysBlock::parse_contents_file_u64("queue/io_poll", &directory_entry);
-            blockdevice_data.queue_io_poll_delay = SysBlock::parse_contents_file_i64("queue/io_poll_delay", &directory_entry);
-            blockdevice_data.queue_logical_block_size = SysBlock::parse_contents_file_u64("queue/logical_block_size", &directory_entry);
-            blockdevice_data.queue_max_discard_segments = SysBlock::parse_contents_file_u64("queue/max_discard_segments", &directory_entry);
-            blockdevice_data.queue_max_hw_sectors_kb = SysBlock::parse_contents_file_u64("queue/max_hw_sectors_kb", &directory_entry);
-            blockdevice_data.queue_max_integrity_segments = SysBlock::parse_contents_file_u64("queue/max_integrity_segments", &directory_entry);
-            blockdevice_data.queue_max_sectors_kb = SysBlock::parse_contents_file_u64("queue/max_sectors_kb", &directory_entry);
-            blockdevice_data.queue_max_segment_size = SysBlock::parse_contents_file_u64("queue/max_segment_size", &directory_entry);
-            blockdevice_data.queue_max_segments = SysBlock::parse_contents_file_u64("queue/max_segments", &directory_entry);
-            blockdevice_data.queue_minimum_io_size = SysBlock::parse_contents_file_u64("queue/minimum_io_size", &directory_entry);
-            blockdevice_data.queue_nomerges = SysBlock::parse_contents_file_u64("queue/nomerges", &directory_entry);
-            blockdevice_data.queue_nr_requests = SysBlock::parse_contents_file_u64("queue/nr_requests", &directory_entry);
-            blockdevice_data.queue_nr_zones = SysBlock::parse_contents_file_option_u64("queue/nr_zones", &directory_entry);
-            blockdevice_data.queue_optimal_io_size = SysBlock::parse_contents_file_u64("queue/optimal_io_size", &directory_entry);
-            blockdevice_data.queue_physical_block_size = SysBlock::parse_contents_file_u64("queue/physical_block_size", &directory_entry);
-            blockdevice_data.queue_read_ahead_kb = SysBlock::parse_contents_file_u64("queue/read_ahead_kb", &directory_entry);
-            blockdevice_data.queue_rotational = SysBlock::parse_contents_file_u64("queue/rotational", &directory_entry);
-            blockdevice_data.queue_rq_affinity = SysBlock::parse_contents_file_u64("queue/rq_affinity", &directory_entry);
-            SysBlock::parse_queue_scheduler(&mut blockdevice_data, &directory_entry);
-            blockdevice_data.queue_write_cache = SysBlock::parse_contents_file_string("queue/write_cache", &directory_entry);
-            blockdevice_data.queue_write_same_max_bytes = SysBlock::parse_contents_file_u64("queue/write_same_max_bytes", &directory_entry);
-            blockdevice_data.queue_zoned = SysBlock::parse_contents_file_option_string("queue/zoned", &directory_entry);
-            blockdevice_data.range = SysBlock::parse_contents_file_u64("range", &directory_entry);
-            blockdevice_data.removable = SysBlock::parse_contents_file_u64("removable", &directory_entry);
-            blockdevice_data.ro = SysBlock::parse_contents_file_u64("ro", &directory_entry);
-            blockdevice_data.size = SysBlock::parse_contents_file_u64("size", &directory_entry);
+            blockdevice_data.alignment_offset = SysBlock::parse_contents_file_u64("alignment_offset", &directory_entry)?;
+            blockdevice_data.cache_type = SysBlock::parse_contents_file_option_string("cache_type", &directory_entry)?;
+            SysBlock::parse_dev(&mut blockdevice_data, &directory_entry)?;
+            blockdevice_data.discard_alignment = SysBlock::parse_contents_file_u64("discard_alignment", &directory_entry)?;
+            blockdevice_data.diskseq = SysBlock::parse_contents_file_option_u64("diskseq", &directory_entry)?;
+            blockdevice_data.hidden = SysBlock::parse_contents_file_u64("hidden", &directory_entry)?;
+            SysBlock::parse_inflight(&mut blockdevice_data, &directory_entry)?;
+            blockdevice_data.queue_add_random = SysBlock::parse_contents_file_u64("queue/add_random", &directory_entry)?;
+            blockdevice_data.queue_chunk_sectors = SysBlock::parse_contents_file_option_u64("queue/chunk_sectors", &directory_entry)?;
+            blockdevice_data.queue_dax = SysBlock::parse_contents_file_u64("queue/dax", &directory_entry)?;
+            blockdevice_data.queue_discard_granularity = SysBlock::parse_contents_file_u64("queue/discard_granularity", &directory_entry)?;
+            blockdevice_data.queue_discard_max_bytes = SysBlock::parse_contents_file_u64("queue/discard_max_bytes", &directory_entry)?;
+            blockdevice_data.queue_discard_max_hw_bytes = SysBlock::parse_contents_file_u64("queue/discard_max_hw_bytes", &directory_entry)?;
+            blockdevice_data.queue_hw_sector_size = SysBlock::parse_contents_file_u64("queue/hw_sector_size", &directory_entry)?;
+            blockdevice_data.queue_io_poll = SysBlock::parse_contents_file_u64("queue/io_poll", &directory_entry)?;
+            blockdevice_data.queue_io_poll_delay = SysBlock::parse_contents_file_i64("queue/io_poll_delay", &directory_entry)?;
+            blockdevice_data.queue_logical_block_size = SysBlock::parse_contents_file_u64("queue/logical_block_size", &directory_entry)?;
+            blockdevice_data.queue_max_discard_segments = SysBlock::parse_contents_file_u64("queue/max_discard_segments", &directory_entry)?;
+            blockdevice_data.queue_max_hw_sectors_kb = SysBlock::parse_contents_file_u64("queue/max_hw_sectors_kb", &directory_entry)?;
+            blockdevice_data.queue_max_integrity_segments = SysBlock::parse_contents_file_u64("queue/max_integrity_segments", &directory_entry)?;
+            blockdevice_data.queue_max_sectors_kb = SysBlock::parse_contents_file_u64("queue/max_sectors_kb", &directory_entry)?;
+            blockdevice_data.queue_max_segment_size = SysBlock::parse_contents_file_u64("queue/max_segment_size", &directory_entry)?;
+            blockdevice_data.queue_max_segments = SysBlock::parse_contents_file_u64("queue/max_segments", &directory_entry)?;
+            blockdevice_data.queue_minimum_io_size = SysBlock::parse_contents_file_u64("queue/minimum_io_size", &directory_entry)?;
+            blockdevice_data.queue_nomerges = SysBlock::parse_contents_file_u64("queue/nomerges", &directory_entry)?;
+            blockdevice_data.queue_nr_requests = SysBlock::parse_contents_file_u64("queue/nr_requests", &directory_entry)?;
+            blockdevice_data.queue_nr_zones = SysBlock::parse_contents_file_option_u64("queue/nr_zones", &directory_entry)?;
+            blockdevice_data.queue_optimal_io_size = SysBlock::parse_contents_file_u64("queue/optimal_io_size", &directory_entry)?;
+            blockdevice_data.queue_physical_block_size = SysBlock::parse_contents_file_u64("queue/physical_block_size", &directory_entry)?;
+            blockdevice_data.queue_read_ahead_kb = SysBlock::parse_contents_file_u64("queue/read_ahead_kb", &directory_entry)?;
+            blockdevice_data.queue_rotational = SysBlock::parse_contents_file_u64("queue/rotational", &directory_entry)?;
+            blockdevice_data.queue_rq_affinity = SysBlock::parse_contents_file_u64("queue/rq_affinity", &directory_entry)?;
+            SysBlock::parse_queue_scheduler(&mut blockdevice_data, &directory_entry)?;
+            blockdevice_data.queue_write_cache = SysBlock::parse_contents_file_string("queue/write_cache", &directory_entry)?;
+            blockdevice_data.queue_write_same_max_bytes = SysBlock::parse_contents_file_u64("queue/write_same_max_bytes", &directory_entry)?;
+            blockdevice_data.queue_zoned = SysBlock::parse_contents_file_option_string("queue/zoned", &directory_entry)?;
+            blockdevice_data.range = SysBlock::parse_contents_file_u64("range", &directory_entry)?;
+            blockdevice_data.removable = SysBlock::parse_contents_file_u64("removable", &directory_entry)?;
+            blockdevice_data.ro = SysBlock::parse_contents_file_u64("ro", &directory_entry)?;
+            blockdevice_data.size = SysBlock::parse_contents_file_u64("size", &directory_entry)?;
 
-            SysBlock::parse_stat(&mut blockdevice_data, &directory_entry);
+            SysBlock::parse_stat(&mut blockdevice_data, &directory_entry)?;
 
             sysblock.block_devices.push(blockdevice_data);
         }
 
-        sysblock
+        Ok(sysblock)
     }
 }
 
@@ -685,7 +717,7 @@ mod tests {
         write(format!("{}/block/sda/size", test_path),size).expect("error writing to mock sysfs size file.");
         write(format!("{}/block/sda/stat", test_path),stat).expect("error writing to mock sysfs stat file.");
 
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
 
         remove_dir_all(test_path).unwrap();
 
@@ -859,7 +891,7 @@ mod tests {
         write(format!("{}/block/sda/size", test_path), size).expect("error writing to mock sysfs size file.");
         write(format!("{}/block/sda/stat", test_path), stat).expect("error writing to mock sysfs stat file.");
 
-        let result = Builder::new().path(&test_path).read();
+        let result = Builder::new().path(&test_path).read().unwrap();
 
         remove_dir_all(test_path).unwrap();
 
