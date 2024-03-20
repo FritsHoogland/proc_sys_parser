@@ -114,6 +114,7 @@ let proc_block = Builder::new().path("/my-sys/block").read();
 ```
 */
 use std::fs::{read_to_string, read_dir, DirEntry};
+use regex::Regex;
 use crate::ProcSysParserError;
 
 /// Struct for holding `/sys/block` block device statistics and information
@@ -126,21 +127,26 @@ pub struct SysBlock {
 #[derive(Default)]
 pub struct Builder {
     pub sys_path : String,
+    pub filter : String,
 }
 
 impl Builder {
     pub fn new() -> Builder {
         Builder { 
-            sys_path: "/sys".to_string() 
+            sys_path: "/sys".to_string(), 
+            filter: "^dm-".to_string(),
         }
     }
     pub fn path(mut self, sys_path: &str) -> Builder {
         self.sys_path = sys_path.to_string();
         self
     }
-
+    pub fn regex(mut self, filter: &str) -> Builder {
+        self.filter = filter.to_string();
+        self
+    }
     pub fn read(self) -> Result<SysBlock, ProcSysParserError> {
-        SysBlock::read_sys_block_devices(format!("{}/block", self.sys_path).as_str())
+        SysBlock::read_sys_block_devices(format!("{}/block", self.sys_path).as_str(), self.filter.as_str())
     }
 }
 
@@ -560,14 +566,22 @@ impl SysBlock {
             .trim_end_matches('\n')
             .to_string())
     }
-    pub fn read_sys_block_devices(sys_block_path: &str) -> Result<SysBlock, ProcSysParserError> {
+    pub fn read_sys_block_devices(
+        sys_block_path: &str,
+        filter: &str,
+    ) -> Result<SysBlock, ProcSysParserError> {
         let mut sysblock = SysBlock::new();
 
         let blockdevice_directories = read_dir(sys_block_path)
             .map_err(|error| ProcSysParserError::DirectoryReadError { directory: sys_block_path.to_string(), error })?;
+        let filter_regex = Regex::new(filter)
+            .map_err(|error| ProcSysParserError::RegexCompileError { regex: filter.to_string() })?;
 
         for blockdevice in blockdevice_directories {
             let directory_entry = blockdevice.unwrap_or_else(|error| panic!("Error {} reading block device sysfs entry", error));
+            // apply filter
+            if !filter_regex.as_str().is_empty() && filter_regex.is_match(&directory_entry.path().to_string_lossy().to_string()) { continue };
+
             let mut blockdevice_data = BlockDevice::new();
 
             blockdevice_data.device_name = directory_entry.file_name().into_string().unwrap();
