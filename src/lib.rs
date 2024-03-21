@@ -327,7 +327,7 @@ SysBlock {
 (edited for readability)
  */
 
-use std::{num::{ParseFloatError, ParseIntError}, error::Error};
+use std::num::{ParseFloatError, ParseIntError};
 
 use thiserror::Error;
 //use anyhow::Result;
@@ -356,7 +356,7 @@ pub enum ProcSysParserError {
     #[error("Error {error} during reading directory {directory}.")]
     DirectoryReadError { directory: String, error: std::io::Error },
     // This error means the regex cannot be compiled.
-    #[error("Error {error} during regex compilation.")]
+    #[error("Error during compilation regex: {regex}.")]
     RegexCompileError { regex: String },
     //
 }

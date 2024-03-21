@@ -32,6 +32,7 @@ let proc_net_dev = Builder::new().path("/myproc").read();
 
 */
 use std::fs::read_to_string;
+use regex::Regex;
 use crate::ProcSysParserError;
 
 /// Struct for holding `/proc/net/dev` statistics
@@ -45,6 +46,7 @@ pub struct ProcNetDev {
 pub struct Builder {
     pub proc_path : String,
     pub proc_file : String,
+    pub proc_filter : String,
 }
 
 impl Builder {
@@ -52,6 +54,7 @@ impl Builder {
         Builder { 
             proc_path: "/proc".to_string(),
             proc_file: "net/dev".to_string(),
+            proc_filter: "^lo".to_string(),
         }
     }
 
@@ -63,8 +66,12 @@ impl Builder {
         self.proc_file = proc_file.to_string();
         self
     }
+    pub fn filter(mut self, proc_filter: &str) -> Builder {
+        self.proc_filter = proc_filter.to_string();
+        self
+    }
     pub fn read(self) -> Result<ProcNetDev, ProcSysParserError> {
-        ProcNetDev::read_proc_net_dev(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
+        ProcNetDev::read_proc_net_dev(format!("{}/{}", &self.proc_path, &self.proc_file).as_str(), &self.proc_filter.as_str())
     }
 }
 
@@ -100,12 +107,20 @@ impl ProcNetDev {
     pub fn new() -> ProcNetDev {
         ProcNetDev::default()
     }
-    pub fn parse_proc_net_dev(proc_net_dev: &str,) -> Result<ProcNetDev, ProcSysParserError> {
+    pub fn parse_proc_net_dev(
+        proc_net_dev: &str, 
+        filter: &str
+    ) -> Result<ProcNetDev, ProcSysParserError> {
         let mut procnetdev = ProcNetDev::new();
+        let filter_regex = Regex::new(filter)
+            .map_err(|_| ProcSysParserError::RegexCompileError { regex: filter.to_string() })?;
+
         for line in proc_net_dev.lines() {
+            println!("{}", line);
             match line {
                 line if line.starts_with("Inter-|   Receive") => continue,
                 line if line.starts_with(" face |bytes") => continue,
+                line if !filter_regex.as_str().is_empty() && filter_regex.is_match(line.trim_start()) => continue,
                 line => procnetdev.interface.push(ProcNetDev::parse_proc_net_dev_line(line)?),
             }
         }
@@ -169,10 +184,10 @@ impl ProcNetDev {
                 .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
         })
     }
-    pub fn read_proc_net_dev(proc_net_dev_file: &str) -> Result<ProcNetDev, ProcSysParserError> {
+    pub fn read_proc_net_dev(proc_net_dev_file: &str, proc_net_dev_filter: &str) -> Result<ProcNetDev, ProcSysParserError> {
         let proc_net_dev_output = read_to_string(proc_net_dev_file)
             .map_err(|error| ProcSysParserError::FileReadError { file: proc_net_dev_file.to_string(), error })?;
-        ProcNetDev::parse_proc_net_dev(&proc_net_dev_output)
+        ProcNetDev::parse_proc_net_dev(&proc_net_dev_output, &proc_net_dev_filter)
     }
 }
 
@@ -194,7 +209,7 @@ mod tests {
     #[test]
     fn parse_proc_netdev_invalid_line() {
         let netdev_line = "Inter-|   Receive                                                |  Transmit";
-        let result = ProcNetDev::parse_proc_net_dev(&netdev_line).unwrap();
+        let result = ProcNetDev::parse_proc_net_dev(&netdev_line, "").unwrap();
         assert_eq!(result, ProcNetDev { interface: vec![] });
     }
 
@@ -204,7 +219,7 @@ mod tests {
  face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
     lo:       0       0    0    0    0     0          0         0        0       0    0    0    0     0       0          0
   eth0: 151013652   16736    0    0    0     0          0         0   816228   12257    0    0    0     0       0          0";
-        let result = ProcNetDev::parse_proc_net_dev(proc_netdev).unwrap();
+        let result = ProcNetDev::parse_proc_net_dev(proc_netdev, "").unwrap();
         assert_eq!(result, ProcNetDev { interface:
         vec![InterfaceStats { name: "lo".to_string(), receive_bytes: 0, receive_packets: 0, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 0, transmit_packets: 0, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 },
              InterfaceStats { name: "eth0".to_string(), receive_bytes: 151013652, receive_packets: 16736, receive_errors: 0, receive_drop: 0, receive_fifo: 0, receive_frame: 0, receive_compressed: 0, receive_multicast: 0, transmit_bytes: 816228, transmit_packets: 12257, transmit_errors: 0, transmit_drop: 0, transmit_fifo: 0, transmit_collisions: 0, transmit_carrier: 0, transmit_compressed: 0 }
@@ -223,7 +238,9 @@ mod tests {
         create_dir_all(format!("{}/net", test_path)).expect("Error creating mock directory.");
 
         write(format!("{}/net/dev", test_path), proc_netdev).expect(format!("Error writing to {}/net/dev", test_path).as_str());
-        let result = Builder::new().path(&test_path).read().unwrap();
+        // please mind filter("") is used to remove the filter for "^lo", which would remove
+        // lo/localhost. This also removes the 'loop' interfaces that are seen with docker.
+        let result = Builder::new().filter("").path(&test_path).read().unwrap();
         remove_dir_all(test_path).unwrap();
 
         assert_eq!(result, ProcNetDev { interface:

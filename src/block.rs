@@ -575,12 +575,13 @@ impl SysBlock {
         let blockdevice_directories = read_dir(sys_block_path)
             .map_err(|error| ProcSysParserError::DirectoryReadError { directory: sys_block_path.to_string(), error })?;
         let filter_regex = Regex::new(filter)
-            .map_err(|error| ProcSysParserError::RegexCompileError { regex: filter.to_string() })?;
+            .map_err(|_| ProcSysParserError::RegexCompileError { regex: filter.to_string() })?;
 
         for blockdevice in blockdevice_directories {
             let directory_entry = blockdevice.unwrap_or_else(|error| panic!("Error {} reading block device sysfs entry", error));
+
             // apply filter
-            if !filter_regex.as_str().is_empty() && filter_regex.is_match(&directory_entry.path().to_string_lossy().to_string()) { continue };
+            if !filter_regex.as_str().is_empty() && filter_regex.is_match(&directory_entry.file_name().into_string().unwrap()) { continue };
 
             let mut blockdevice_data = BlockDevice::new();
 
@@ -977,5 +978,95 @@ mod tests {
                        ],
                    }
         );
+    }
+    #[test]
+    fn create_sys_block_device_test_filter() {
+        let alignment_offset = "0";
+        let cache_type = "write back";
+        let dev = "253:0";
+        let discard_alignment = "0";
+        let diskseq = "9";
+        let hidden = "0";
+        let inflight = "       1        2";
+        let queue_add_random = "0";
+        let queue_dax = "0";
+        let queue_discard_granularity = "512";
+        let queue_discard_max_bytes = "2147483136";
+        let queue_discard_max_hw_bytes = "2147483136";
+        let queue_hw_sector_size = "512";
+        let queue_io_poll = "0";
+        let queue_io_poll_delay = "-1";
+        let queue_logical_block_size = "512";
+        let queue_max_discard_segments = "1";
+        let queue_max_hw_sectors_kb = "2147483647";
+        let queue_max_integrity_segments = "0";
+        let queue_max_sectors_kb = "1280";
+        let queue_max_segment_size = "4294967295";
+        let queue_max_segments = "254";
+        let queue_minimum_io_size = "512";
+        let queue_nomerges = "0";
+        let queue_nr_requests = "256";
+        let queue_optimal_io_size = "0";
+        let queue_physical_block_size = "512";
+        let queue_read_ahead_kb = "128";
+        let queue_rotational = "1";
+        let queue_rq_affinity = "1";
+        let queue_scheduler = "[none] mq-deadline";
+        let queue_write_cache = "write back";
+        let queue_write_same_max_bytes = "0";
+        let range = "16";
+        let removable = "0";
+        let ro = "0";
+        let size = "125829120";
+        let stat = "    9718     3826  1052371     3026     2856     2331   312397     1947        0     6004     5554";
+
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}", directory_suffix);
+        
+        create_dir_all(format!("{}/block/dm-0/queue", test_path)).expect("Error creating mock sysfs directories.");
+        write(format!("{}/block/dm-0/alignment_offset", test_path), alignment_offset).expect("error writing to mock sysfs alignment_offset file.");
+        write(format!("{}/block/dm-0/cache_type", test_path), cache_type).expect("error writing to mock sysfs cache_type file.");
+        write(format!("{}/block/dm-0/dev", test_path), dev).expect("error writing to mock sysfs dev file.");
+        write(format!("{}/block/dm-0/discard_alignment", test_path), discard_alignment).expect("error writing to mock sysfs discard_alginment file.");
+        write(format!("{}/block/dm-0/diskseq", test_path), diskseq).expect("error writing to mock sysfs diskseq file.");
+        write(format!("{}/block/dm-0/hidden", test_path), hidden).expect("error writing to mock sysfs hidden file.");
+        write(format!("{}/block/dm-0/inflight", test_path), inflight).expect("error writing to mock sysfs inflight file.");
+        write(format!("{}/block/dm-0/queue/add_random", test_path), queue_add_random).expect("error writing to mock sysfs queue/add_random file.");
+        write(format!("{}/block/dm-0/queue/dax", test_path), queue_dax).expect("error writing to mock sysfs queue/dax file.");
+        write(format!("{}/block/dm-0/queue/discard_granularity", test_path), queue_discard_granularity).expect("error writing to mock sysfs queue/discard_granularity file.");
+        write(format!("{}/block/dm-0/queue/discard_max_bytes", test_path), queue_discard_max_bytes).expect("error writing to mock sysfs queue/discard_max_bytes file.");
+        write(format!("{}/block/dm-0/queue/discard_max_hw_bytes", test_path), queue_discard_max_hw_bytes).expect("error writing to mock sysfs queue/discard_max_hw_bytes file.");
+        write(format!("{}/block/dm-0/queue/hw_sector_size", test_path), queue_hw_sector_size).expect("error writing to mock sysfs queue/hw_sector_size file.");
+        write(format!("{}/block/dm-0/queue/io_poll", test_path), queue_io_poll).expect("error writing to mock sysfs queue/io_poll file.");
+        write(format!("{}/block/dm-0/queue/io_poll_delay", test_path), queue_io_poll_delay).expect("error writing to mock sysfs queue/io_poll_delay file.");
+        write(format!("{}/block/dm-0/queue/logical_block_size", test_path), queue_logical_block_size).expect("error writing to mock sysfs queue/logical_block_size file.");
+        write(format!("{}/block/dm-0/queue/max_discard_segments", test_path), queue_max_discard_segments).expect("error writing to mock sysfs queue/max_discard_segments file.");
+        write(format!("{}/block/dm-0/queue/max_hw_sectors_kb", test_path), queue_max_hw_sectors_kb).expect("error writing to mock sysfs queue/max_hw_sectors_kb file.");
+        write(format!("{}/block/dm-0/queue/max_integrity_segments", test_path), queue_max_integrity_segments).expect("error writing to mock sysfs queue/max_integrity_segments file.");
+        write(format!("{}/block/dm-0/queue/max_sectors_kb", test_path), queue_max_sectors_kb).expect("error writing to mock sysfs queue/max_sectors_kb file.");
+        write(format!("{}/block/dm-0/queue/max_segment_size", test_path), queue_max_segment_size).expect("error writing to mock sysfs queue/max_segment_size file.");
+        write(format!("{}/block/dm-0/queue/max_segments", test_path), queue_max_segments).expect("error writing to mock sysfs queue/max_segments file.");
+        write(format!("{}/block/dm-0/queue/minimum_io_size", test_path), queue_minimum_io_size).expect("error writing to mock sysfs queue/minimum_io_size file.");
+        write(format!("{}/block/dm-0/queue/nomerges", test_path), queue_nomerges).expect("error writing to mock sysfs queue/nomerges file.");
+        write(format!("{}/block/dm-0/queue/nr_requests", test_path), queue_nr_requests).expect("error writing to mock sysfs queue/nr_requests file.");
+        write(format!("{}/block/dm-0/queue/optimal_io_size", test_path), queue_optimal_io_size).expect("error writing to mock sysfs queue/optimal_io_size file.");
+        write(format!("{}/block/dm-0/queue/physical_block_size", test_path), queue_physical_block_size).expect("error writing to mock sysfs queue/physical_block_size file.");
+        write(format!("{}/block/dm-0/queue/read_ahead_kb", test_path), queue_read_ahead_kb).expect("error writing to mock sysfs queue/read_ahead_kb file.");
+        write(format!("{}/block/dm-0/queue/rotational", test_path), queue_rotational).expect("error writing to mock sysfs queue/rotational file.");
+        write(format!("{}/block/dm-0/queue/rq_affinity", test_path), queue_rq_affinity).expect("error writing to mock sysfs queue/rq_affinity file.");
+        write(format!("{}/block/dm-0/queue/scheduler", test_path), queue_scheduler).expect("error writing to mock sysfs queue/scheduler file.");
+        write(format!("{}/block/dm-0/queue/write_cache", test_path), queue_write_cache).expect("error writing to mock sysfs queue/write_cache file.");
+        write(format!("{}/block/dm-0/queue/write_same_max_bytes", test_path), queue_write_same_max_bytes).expect("error writing to mock sysfs queue/write_same_max_bytes file.");
+        write(format!("{}/block/dm-0/range", test_path), range).expect("error writing to mock sysfs range file.");
+        write(format!("{}/block/dm-0/removable", test_path), removable).expect("error writing to mock sysfs removable file.");
+        write(format!("{}/block/dm-0/ro", test_path), ro).expect("error writing to mock sysfs ro file.");
+        write(format!("{}/block/dm-0/size", test_path), size).expect("error writing to mock sysfs size file.");
+        write(format!("{}/block/dm-0/stat", test_path), stat).expect("error writing to mock sysfs stat file.");
+
+        let result = Builder::new().path(&test_path).read().unwrap();
+
+        remove_dir_all(test_path).unwrap();
+
+        assert_eq!(result, SysBlock { block_devices: vec![] });
     }
 }
