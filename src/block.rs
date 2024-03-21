@@ -528,27 +528,23 @@ impl SysBlock {
         file: &str,
         blockdevice_dir: &DirEntry,
     ) -> Result<u64, ProcSysParserError> {
-        Ok(
-            read_to_string(blockdevice_dir.path().join(file))
+        read_to_string(blockdevice_dir.path().join(file))
                 .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
                 .trim_end_matches('\n')
                 .to_string()
                 .parse::<u64>()
-                .map_err(ProcSysParserError::ParseToIntegerError)?
-        )
+                .map_err(ProcSysParserError::ParseToIntegerError)
     }
     fn parse_contents_file_i64(
         file: &str,
         blockdevice_dir: &DirEntry,
     ) -> Result<i64, ProcSysParserError> {
-        Ok(
-            read_to_string(blockdevice_dir.path().join(file))
+        read_to_string(blockdevice_dir.path().join(file))
                 .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
                 .trim_end_matches('\n')
                 .to_string()
                 .parse::<i64>()
-                .map_err(ProcSysParserError::ParseToIntegerError)?
-        )
+                .map_err(ProcSysParserError::ParseToIntegerError)
     }
     fn parse_contents_file_option_u64(
         file: &str,

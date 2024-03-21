@@ -176,18 +176,18 @@ impl ProcStat {
         Ok(procstat)
     }
     fn generate_number_vector(proc_stat_line: &str) -> Result<Vec<u64>, ProcSysParserError> {
-        Ok(proc_stat_line.split_whitespace()
+        proc_stat_line.split_whitespace()
             .skip(1)
-            .map(|row| row.parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+            .map(|row| row.parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError))
             .collect::<Vec<_>>()
             .into_iter()
-            .collect::<Result<Vec<_>, _>>()?)
+            .collect::<Result<Vec<_>, _>>()
     }
     fn generate_number_unsigned(proc_stat_line: &str) -> Result<u64, ProcSysParserError> {
-        Ok(proc_stat_line.split_whitespace()
+        proc_stat_line.split_whitespace()
             .nth(1)
             .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_number_unsigned".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
+            .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)
     }
     pub fn read_proc_stat(proc_stat_file: &str) -> Result<ProcStat, ProcSysParserError> {
         let proc_stat_output = read_to_string(proc_stat_file)
@@ -221,16 +221,16 @@ impl CpuStat {
                 .to_string(),
             user: ((splitted.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times user".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)? *1000_u64)/clock_time),
             nice: ((splitted.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times nice".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)? *1000_u64)/clock_time),
             system: ((splitted.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times system".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)? *1000_u64)/clock_time),
             idle: ((splitted.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "stat generate_cpu_times idle".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))? *1000_u64)/clock_time),
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)? *1000_u64)/clock_time),
             iowait: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             irq: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),
             softirq: parse_next_and_conversion_into_option_milliseconds(splitted.next(), clock_time),

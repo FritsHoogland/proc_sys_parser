@@ -71,7 +71,7 @@ impl Builder {
         self
     }
     pub fn read(self) -> Result<ProcNetDev, ProcSysParserError> {
-        ProcNetDev::read_proc_net_dev(format!("{}/{}", &self.proc_path, &self.proc_file).as_str(), &self.proc_filter.as_str())
+        ProcNetDev::read_proc_net_dev(format!("{}/{}", &self.proc_path, &self.proc_file).as_str(), self.proc_filter.as_str())
     }
 }
 
@@ -135,58 +135,58 @@ impl ProcNetDev {
                 .to_string(),
             receive_bytes: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_bytes".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_packets: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_packets".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_errors: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_errors".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_drop: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_drop".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_fifo: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_fifo".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_frame: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_frame".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_compressed: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_compressed".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             receive_multicast: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev receive_multicast".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_bytes: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_bytes".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_packets: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_packets".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_errors: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_errors".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_drop: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_drop".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_fifo: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_fifo".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_collisions: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_collisions".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_carrier: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_carrier".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             transmit_compressed: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "net_dev transmit_compressed".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
         })
     }
     pub fn read_proc_net_dev(proc_net_dev_file: &str, proc_net_dev_filter: &str) -> Result<ProcNetDev, ProcSysParserError> {
         let proc_net_dev_output = read_to_string(proc_net_dev_file)
             .map_err(|error| ProcSysParserError::FileReadError { file: proc_net_dev_file.to_string(), error })?;
-        ProcNetDev::parse_proc_net_dev(&proc_net_dev_output, &proc_net_dev_filter)
+        ProcNetDev::parse_proc_net_dev(&proc_net_dev_output, proc_net_dev_filter)
     }
 }
 

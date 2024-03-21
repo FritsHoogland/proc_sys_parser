@@ -168,46 +168,46 @@ impl ProcDiskStats {
             DiskStats {
             block_major: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats block_major".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             block_minor: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats block_minor".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             device_name: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats device_name".to_string() })?
                 .to_string(),
             reads_completed_success: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_completed_success".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             reads_merged: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_merged".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             reads_sectors: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_sectors".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             reads_time_spent_ms: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats reads_time_spent_ms".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             writes_completed_success: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_completed_success".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             writes_merged: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_merged".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             writes_sectors: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_sectors".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             writes_time_spent_ms: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats writes_time_spent_ms".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             ios_in_progress: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats ios_in_progress".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             ios_time_spent_ms: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats ios_time_spent_ms".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             ios_weighted_time_spent_ms: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError { item: "diskstats ios_weighted_time_spent_ms".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             discards_completed_success: parse_next_and_conversion_into_option_u64(fields.next()),
             discards_merged: parse_next_and_conversion_into_option_u64(fields.next()),
             discards_sectors: parse_next_and_conversion_into_option_u64(fields.next()),

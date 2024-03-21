@@ -172,7 +172,7 @@ impl ProcSchedStat {
             line if line.starts_with("cpu") => {
                 line.split_whitespace()
                     .map(|cpu| if cpu.starts_with("cpu") { cpu.strip_prefix("cpu").unwrap() } else { cpu } )
-                    .map(|row| row.parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+                    .map(|row| row.parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError))
                     .collect::<Vec<_>>()
                     .into_iter()
                     .collect::<Result<Vec<_>, _>>()?
@@ -200,7 +200,7 @@ impl ProcSchedStat {
             .map(|line| line.strip_prefix("domain").unwrap_or_default())
             .next()
             .ok_or(ProcSysParserError::IteratorItemError {item: "schedstat generate_domain_struct domain_nr".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
 
         /*
         let cpu_masks: Vec<u64> = proc_schedstat_line
@@ -216,7 +216,7 @@ impl ProcSchedStat {
             .nth(1)
             .ok_or(ProcSysParserError::IteratorItemError {item: "schedstat generate_domain_struct cpu_masks".to_string() })?
             .split(',')
-            .map(|cpu_mask| u64::from_str_radix(cpu_mask, 16).map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+            .map(|cpu_mask| u64::from_str_radix(cpu_mask, 16).map_err(ProcSysParserError::ParseToIntegerError))
             .collect::<Vec<_>>()
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
@@ -231,7 +231,7 @@ impl ProcSchedStat {
         let statistics: Vec<u64> = proc_schedstat_line
             .split_whitespace()
             .skip(2)
-            .map(|statistics| statistics.parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error)))
+            .map(|statistics| statistics.parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError))
             .collect::<Vec<_>>()
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
@@ -245,10 +245,10 @@ impl ProcSchedStat {
         })
     }
     fn generate_number_unsigned(proc_stat_line: &str) -> Result<u64, ProcSysParserError> {
-        Ok(proc_stat_line.split_whitespace()
+        proc_stat_line.split_whitespace()
             .nth(1)
             .ok_or(ProcSysParserError::IteratorItemError {item: "schedstat generate_number_unsigned".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
+            .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)
     }
     pub fn read_proc_schedstat(proc_schedstat_file: &str) -> Result<ProcSchedStat, ProcSysParserError> {
         let proc_schedstat_output = read_to_string(proc_schedstat_file)

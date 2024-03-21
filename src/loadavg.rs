@@ -100,24 +100,24 @@ impl ProcLoadavg {
             //load_1: fields.next().ok_or(ProcSysParserError::IteratorItemError)?.parse::<f64>().unwrap(),
             load_1: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "loadavg load_1".to_string() })?
-                .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?,
+                .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?,
             load_5: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "loadavg load_5".to_string() })?
-                .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?,
+                .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?,
             load_15: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "loadavg load_15". to_string() })?
-                .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?,
+                .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?,
             current_runnable: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "loadavg current_runnable".to_string() })?
                 .split('/').next().ok_or(ProcSysParserError::IteratorItemError {item: "loadavg current_runnable split".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             total: fields_copy.nth(3)
                 .ok_or(ProcSysParserError::IteratorItemError {item: "loadavg total".to_string() })?
                 .split('/').nth(1).ok_or(ProcSysParserError::IteratorItemError {item: "loadavg total split".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
             last_pid: fields.next()
                 .ok_or(ProcSysParserError::IteratorItemError {item: "loadavg last_pid".to_string() })?
-                .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?,
+                .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?,
         })
     }
     pub fn read_proc_loadavg(proc_loadavg: &str) -> Result<ProcLoadavg, ProcSysParserError>

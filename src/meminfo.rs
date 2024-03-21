@@ -368,11 +368,11 @@ impl ProcMemInfo {
         Ok(procmeminfo)
     }
     fn parse_proc_meminfo_line(proc_meminfo_line: &str) -> Result<u64, ProcSysParserError> {
-        Ok(proc_meminfo_line
+        proc_meminfo_line
             .split_whitespace()
             .nth(1)
             .ok_or(ProcSysParserError::IteratorItemError {item: "meminfo parse_proc_meminfo".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
+            .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)
     }
     pub fn read_proc_meminfo(proc_meminfo_file: &str) -> Result<ProcMemInfo, ProcSysParserError> {
         let proc_meminfo_output = read_to_string(proc_meminfo_file)

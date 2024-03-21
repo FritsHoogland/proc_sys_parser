@@ -175,66 +175,66 @@ impl ProcPressure {
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg10".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg10 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.cpu_some_avg60 = line.split_whitespace().nth(2)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg60".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg60 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.cpu_some_avg300 = line.split_whitespace().nth(3)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg300".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg300 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.cpu_some_total = line.split_whitespace().nth(4)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_total".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_total after split =".to_string() })?
-                                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
                                 },
                                 "io" => {
                                     psi.io_some_avg10 = line.split_whitespace().nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg10".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg10 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.io_some_avg60 = line.split_whitespace().nth(2)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg60".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg60 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.io_some_avg300 = line.split_whitespace().nth(3)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg300".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg300 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.io_some_total = line.split_whitespace().nth(4)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_total".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_total after split =".to_string() })?
-                                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
                                 },
                                 "memory" => {
                                     psi.memory_some_avg10 = line.split_whitespace().nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg10".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg10 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.memory_some_avg60 = line.split_whitespace().nth(2)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg60".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg60 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.memory_some_avg300 = line.split_whitespace().nth(3)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg300".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg300 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.memory_some_total = line.split_whitespace().nth(4)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_total".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_total after split =".to_string() })?
-                                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
                                 },
                                 &_ => warn!("Unknown entry in some: {}, {}", file, line),
                             }
@@ -246,66 +246,66 @@ impl ProcPressure {
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg10".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg10 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?);
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?);
                                     psi.cpu_full_avg60 = Some(line.split_whitespace().nth(2)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg60".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg60 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?);
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?);
                                     psi.cpu_full_avg300 = Some(line.split_whitespace().nth(3)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg300".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_avg300 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?);
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?);
                                     psi.cpu_full_total = Some(line.split_whitespace().nth(4)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_total".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure cpu_some_total after split =".to_string() })?
-                                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?);
+                                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?);
                                 },
                                 "io" => {
                                     psi.io_full_avg10 = line.split_whitespace().nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg10".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg10 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.io_full_avg60 = line.split_whitespace().nth(2)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg60".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg60 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.io_full_avg300 = line.split_whitespace().nth(3)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg300".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_avg300 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.io_full_total = line.split_whitespace().nth(4)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_total".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure io_some_total after split =".to_string() })?
-                                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
                                 },
                                 "memory" => {
                                     psi.memory_full_avg10 = line.split_whitespace().nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg10".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg10 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.memory_full_avg60 = line.split_whitespace().nth(2)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg60".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg60 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.memory_full_avg300 = line.split_whitespace().nth(3)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg300".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_avg300 after split =".to_string() })?
-                                        .parse::<f64>().map_err(|error| ProcSysParserError::ParseToFloatError(error))?;
+                                        .parse::<f64>().map_err(ProcSysParserError::ParseToFloatError)?;
                                     psi.memory_full_total = line.split_whitespace().nth(4)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_total".to_string() })?
                                         .split('=').nth(1)
                                         .ok_or(ProcSysParserError::IteratorItemError {item: "pressure memory_some_total after split =".to_string() })?
-                                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
                                 },
                                 &_ => warn!("Unknown entry in full: {}, {}", file, line),
                             }
