@@ -408,9 +408,9 @@ impl SysBlock {
             .trim_end_matches('\n').to_string();
         let mut fields = dev_contents.split(':');
         blockdevice_data.dev_block_major = fields.next().ok_or(ProcSysParserError::IteratorItemError { item: "block parse_dev major".to_string() })?
-                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.dev_block_minor = fields.next().ok_or(ProcSysParserError::IteratorItemError { item: "block parse_dev minor".to_string() })?
-                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+                        .parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError)?;
         Ok(())
     }
     fn parse_inflight(
@@ -420,10 +420,16 @@ impl SysBlock {
         let inflight_from_file = read_to_string(blockdevice_dir.path().join("inflight"))
             .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join("inflight").to_string_lossy().to_string(), error})?
             .trim_end_matches('\n').to_string();
-        blockdevice_data.inflight_reads = inflight_from_file.split_whitespace().nth(0).ok_or(ProcSysParserError::IteratorItemError { item: "block parse_inflight reads".to_string() })?
-                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
-        blockdevice_data.inflight_writes = inflight_from_file.split_whitespace().nth(1).ok_or(ProcSysParserError::IteratorItemError { item: "block parse_inflight writes".to_string() })?
-                        .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+        blockdevice_data.inflight_reads = inflight_from_file.split_whitespace()
+            .nth(0)
+            .ok_or(ProcSysParserError::IteratorItemError { item: "block parse_inflight reads".to_string() })?
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
+        blockdevice_data.inflight_writes = inflight_from_file.split_whitespace()
+            .nth(1)
+            .ok_or(ProcSysParserError::IteratorItemError { item: "block parse_inflight writes".to_string() })?
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         Ok(())
     }
     fn parse_queue_scheduler(
@@ -468,37 +474,48 @@ impl SysBlock {
 
         blockdevice_data.stat_reads_completed_success = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_completed_success".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_reads_merged = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_merged".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_reads_sectors = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_sectors".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_reads_time_spent_ms = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat reads_time_spent_ms".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_writes_completed_success = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_completed_success".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_writes_merged = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_completed_success".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_writes_sectors = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_sectors".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_writes_time_spent_ms = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat writes_time_spent_ms".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_ios_in_progress = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat ios_in_progress".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_ios_time_spent_ms = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat ios_time_spent_ms".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_ios_weighted_time_spent_ms = stat_contents_splitted.next()
             .ok_or(ProcSysParserError::FindItemError { item: "block parse_stat ios_weighted_time_spent_ms".to_string() })?
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?;
+            .parse::<u64>()
+            .map_err(ProcSysParserError::ParseToIntegerError)?;
         blockdevice_data.stat_discards_completed_success = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
         blockdevice_data.stat_discards_merged = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
         blockdevice_data.stat_discards_sectors = parse_next_and_conversion_into_option_u64(stat_contents_splitted.next());
@@ -513,10 +530,11 @@ impl SysBlock {
     ) -> Result<u64, ProcSysParserError> {
         Ok(
             read_to_string(blockdevice_dir.path().join(file))
-            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
-            .trim_end_matches('\n')
-            .to_string()
-            .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?
+                .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
+                .trim_end_matches('\n')
+                .to_string()
+                .parse::<u64>()
+                .map_err(ProcSysParserError::ParseToIntegerError)?
         )
     }
     fn parse_contents_file_i64(
@@ -525,10 +543,11 @@ impl SysBlock {
     ) -> Result<i64, ProcSysParserError> {
         Ok(
             read_to_string(blockdevice_dir.path().join(file))
-            .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
-            .trim_end_matches('\n')
-            .to_string()
-            .parse::<i64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?
+                .map_err(|error| ProcSysParserError::FileReadError { file: blockdevice_dir.path().join(file).to_string_lossy().to_string(), error })?
+                .trim_end_matches('\n')
+                .to_string()
+                .parse::<i64>()
+                .map_err(ProcSysParserError::ParseToIntegerError)?
         )
     }
     fn parse_contents_file_option_u64(
@@ -540,9 +559,10 @@ impl SysBlock {
             Ok(result) => {
                 Ok(
                     Some(result
-                    .trim_end_matches('\n')
-                    .to_string()
-                    .parse::<u64>().map_err(|error| ProcSysParserError::ParseToIntegerError(error))?)
+                        .trim_end_matches('\n')
+                        .to_string()
+                        .parse::<u64>()
+                        .map_err(ProcSysParserError::ParseToIntegerError)?)
                 )
             },
             Err(_) => Ok(None),
