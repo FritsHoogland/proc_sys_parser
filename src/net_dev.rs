@@ -116,7 +116,6 @@ impl ProcNetDev {
             .map_err(|_| ProcSysParserError::RegexCompileError { regex: filter.to_string() })?;
 
         for line in proc_net_dev.lines() {
-            println!("{}", line);
             match line {
                 line if line.starts_with("Inter-|   Receive") => continue,
                 line if line.starts_with(" face |bytes") => continue,
