@@ -335,10 +335,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ProcSysParserError {
-    /// This error shouldn't happen, unless the source data has changed 
+    /// This error shouldn't happen, unless the source data has changed
     #[error("Expected item is not found on iterator: {item}.")]
     IteratorItemError { item: String },
-    /// This error shouldn't happen, unless the source data has changed 
+    /// This error shouldn't happen, unless the source data has changed
     #[error("Expected character cannot be found: {item}.")]
     FindItemError { item: String },
     /// This error means a string that is picked up and expected to be a float cannot be parsed
@@ -354,7 +354,10 @@ pub enum ProcSysParserError {
     FileReadError { file: String, error: std::io::Error },
     /// This error means the file to be read cannot be found or is unreadable.
     #[error("Error {error} during reading directory {directory}.")]
-    DirectoryReadError { directory: String, error: std::io::Error },
+    DirectoryReadError {
+        directory: String,
+        error: std::io::Error,
+    },
     // This error means the regex cannot be compiled.
     #[error("Error during compilation regex: {regex}.")]
     RegexCompileError { regex: String },
@@ -371,6 +374,7 @@ impl From<ParseFloatError> for ProcSysParserError {
 
 pub mod block;
 pub mod diskstats;
+pub mod fs_xfs_stat;
 pub mod loadavg;
 pub mod meminfo;
 pub mod net_dev;
