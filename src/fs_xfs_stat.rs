@@ -41,8 +41,8 @@ use std::fs::read_to_string;
 /// Struct for holding `/proc/fs/xfs/stat` statistics
 #[derive(Debug, PartialEq, Default)]
 pub struct ProcFsXfsStat {
-    pub xs_write_calls: u64,
-    pub xs_read_calls: u64,
+    pub xs_write_calls: Option<u64>,
+    pub xs_read_calls: Option<u64>,
     pub xs_write_bytes: Option<u64>,
     pub xs_read_bytes: Option<u64>,
 }
@@ -88,38 +88,29 @@ impl ProcFsXfsStat {
     pub fn new() -> ProcFsXfsStat {
         ProcFsXfsStat::default()
     }
-    pub fn parse_proc_fs_xfs_stat(
-        proc_fs_xfs_stat: &str,
-    ) -> Result<ProcFsXfsStat, ProcSysParserError> {
+    pub fn parse_proc_fs_xfs_stat(proc_fs_xfs_stat: &str) -> ProcFsXfsStat {
         let mut proc_fs_xfs_stat_struct = ProcFsXfsStat::new();
 
         for line in proc_fs_xfs_stat.lines() {
             match line {
                 line if line.starts_with("rw ") => {
                     let fields: Vec<&str> = line.split_whitespace().collect();
-                    proc_fs_xfs_stat_struct.xs_write_calls = fields[1].parse::<u64>()?;
-                    proc_fs_xfs_stat_struct.xs_read_calls = fields[2].parse::<u64>()?;
+                    proc_fs_xfs_stat_struct.xs_write_calls = fields[1].parse::<u64>().ok();
+                    proc_fs_xfs_stat_struct.xs_read_calls = fields[2].parse::<u64>().ok();
                 }
                 line if line.starts_with("xpc ") => {
                     let fields: Vec<&str> = line.split_whitespace().collect();
-                    proc_fs_xfs_stat_struct.xs_write_bytes = Some(fields[2].parse::<u64>()?);
-                    proc_fs_xfs_stat_struct.xs_read_bytes = Some(fields[3].parse::<u64>()?);
+                    proc_fs_xfs_stat_struct.xs_write_bytes = fields[2].parse::<u64>().ok();
+                    proc_fs_xfs_stat_struct.xs_read_bytes = fields[3].parse::<u64>().ok();
                 }
                 &_ => { /* anything else currently not implemented */ }
             }
         }
 
-        Ok(proc_fs_xfs_stat_struct)
+        proc_fs_xfs_stat_struct
     }
-    pub fn read_proc_fs_xfs_stat(
-        proc_fs_xfs_stat: &str,
-    ) -> Result<ProcFsXfsStat, ProcSysParserError> {
-        let proc_fs_xfs_stat_output = read_to_string(proc_fs_xfs_stat).map_err(|error| {
-            ProcSysParserError::FileReadError {
-                file: proc_fs_xfs_stat.to_string(),
-                error,
-            }
-        })?;
+    pub fn read_proc_fs_xfs_stat(proc_fs_xfs_stat: &str) -> ProcFsXfsStat {
+        let proc_fs_xfs_stat_output = read_to_string(proc_fs_xfs_stat).unwrap_or(String::from(""));
 
         ProcFsXfsStat::parse_proc_fs_xfs_stat(&proc_fs_xfs_stat_output)
     }
@@ -160,12 +151,12 @@ qm 0 0 0 0 0 0 0 0 0
 xpc 1839985078272 1924118614718 41117984770168
 defer_relog 0
 debug 0";
-        let result = ProcFsXfsStat::parse_proc_fs_xfs_stat(&proc_fs_xfs_stat_file).unwrap();
+        let result = ProcFsXfsStat::parse_proc_fs_xfs_stat(&proc_fs_xfs_stat_file);
         assert_eq!(
             result,
             ProcFsXfsStat {
-                xs_write_calls: 654716312,
-                xs_read_calls: 3877049901,
+                xs_write_calls: Some(654716312),
+                xs_read_calls: Some(3877049901),
                 xs_write_bytes: Some(1924118614718),
                 xs_read_bytes: Some(41117984770168),
             }
@@ -217,8 +208,8 @@ debug 0";
         assert_eq!(
             result,
             ProcFsXfsStat {
-                xs_write_calls: 654716312,
-                xs_read_calls: 3877049901,
+                xs_write_calls: Some(654716312),
+                xs_read_calls: Some(3877049901),
                 xs_write_bytes: Some(1924118614718),
                 xs_read_bytes: Some(41117984770168),
             }
@@ -259,12 +250,12 @@ refcntbt 220 12 2 2 0 0 0 0 0 0 0 0 0 0 0
 qm 0 0 0 0 0 0 0 0 0
 defer_relog 0
 debug 0";
-        let result = ProcFsXfsStat::parse_proc_fs_xfs_stat(&proc_fs_xfs_stat_file).unwrap();
+        let result = ProcFsXfsStat::parse_proc_fs_xfs_stat(&proc_fs_xfs_stat_file);
         assert_eq!(
             result,
             ProcFsXfsStat {
-                xs_write_calls: 654716312,
-                xs_read_calls: 3877049901,
+                xs_write_calls: Some(654716312),
+                xs_read_calls: Some(3877049901),
                 xs_write_bytes: None,
                 xs_read_bytes: None,
             }
