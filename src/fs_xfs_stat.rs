@@ -35,7 +35,6 @@ let proc_loadavg = Builder::new().path("/myproc").read();
 ```
 
 */
-use crate::ProcSysParserError;
 use std::fs::read_to_string;
 
 /// Struct for holding `/proc/fs/xfs/stat` statistics
@@ -70,7 +69,7 @@ impl Builder {
         self.proc_file = proc_file.to_string();
         self
     }
-    pub fn read(self) -> Result<ProcFsXfsStat, ProcSysParserError> {
+    pub fn read(self) -> ProcFsXfsStat {
         ProcFsXfsStat::read_proc_fs_xfs_stat(
             format!("{}/{}", &self.proc_path, &self.proc_file).as_str(),
         )
@@ -80,7 +79,7 @@ impl Builder {
 /// The main function for building a [`ProcMemInfo`] struct with current data.
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
 //pub fn read() -> Result<()> {
-pub fn read() -> Result<ProcFsXfsStat, ProcSysParserError> {
+pub fn read() -> ProcFsXfsStat {
     Builder::new().read()
 }
 
@@ -201,7 +200,7 @@ debug 0";
 
         write(format!("{}/fs/xfs/stat", test_path), proc_fs_xfs_stat_file)
             .expect(format!("Error writing to {}/fs/xfs/stat", test_path).as_str());
-        let result = Builder::new().path(&test_path).read().unwrap();
+        let result = Builder::new().path(&test_path).read();
 
         remove_dir_all(test_path).unwrap();
 
@@ -219,7 +218,15 @@ debug 0";
     fn read_nonexistent_proc_fs_xfs_stat_file() -> Result<(), ProcSysParserError> {
         // uncomment to see the error message
         //let _result = Builder::new().path("/xxxxxxxxxxxx").read()?;
-        assert!(Builder::new().path("/xxxxxxxxxxxx").read().is_err());
+        assert_eq!(
+            Builder::new().path("/xxxxxxxxxxxx").read(),
+            ProcFsXfsStat {
+                xs_write_calls: None,
+                xs_read_calls: None,
+                xs_write_bytes: None,
+                xs_read_bytes: None,
+            }
+        );
         Ok(())
     }
 
