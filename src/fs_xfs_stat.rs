@@ -118,6 +118,7 @@ impl ProcFsXfsStat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ProcSysParserError;
     use rand::distributions::Alphanumeric;
     use rand::{thread_rng, Rng};
     use std::fs::{create_dir_all, remove_dir_all, write};
