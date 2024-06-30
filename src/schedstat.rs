@@ -80,6 +80,7 @@ to match the statistic in the vector.
 
 */
 use std::fs::read_to_string;
+use std::time::SystemTime;
 use crate::ProcSysParserError;
 use log::warn;
 
@@ -91,6 +92,7 @@ pub struct Builder {
 }
 
 impl Builder {
+
     pub fn new() -> Builder {
         Builder { 
             proc_path: "/proc".to_string(),
@@ -102,12 +104,18 @@ impl Builder {
         self.proc_path = proc_path.to_string();
         self
     }
+
     pub fn file(mut self, proc_file: &str) -> Builder {
         self.proc_file = proc_file.to_string();
         self
     }
+
     pub fn read(self) -> Result<ProcSchedStat, ProcSysParserError> {
         ProcSchedStat::read_proc_schedstat(format!("{}/{}", &self.proc_path, &self.proc_file).as_str())
+    }
+
+    pub fn read_pid(self, pid: u32) -> Result<PidSchedStat, ProcSysParserError> {
+        PidSchedStat::read_pid_schedstat(format!("{}/{}/{}", &self.proc_path, pid, &self.proc_file).as_str())
     }
 }
 
@@ -115,6 +123,22 @@ impl Builder {
 /// This uses the Builder pattern, which allows settings such as the filename to specified.
 pub fn read() -> Result<ProcSchedStat, ProcSysParserError> {
     Builder::new().read()
+}
+
+/// The main function for building a [`PidSchedStat`] struct with current data.
+/// This uses the Builder pattern, which allows settings such as the filename to specified.
+pub fn read_pid(pid: u32) -> Result<PidSchedStat, ProcSysParserError> {
+    Builder::new().read_pid( pid )
+}
+
+/// Struct for holding `/proc/<pid>/schedstat` statistics
+///    1) time spent on the cpu (in nanoseconds)
+///    2) time spent waiting on a runqueue (in nanoseconds)
+///    3) # of timeslices run on this cpu
+#[derive(Debug, PartialEq, Default)]
+pub struct PidSchedStat {
+    pub timestamp: u64,
+    pub stats: Vec<u64>,
 }
 
 /// Struct for holding `/proc/schedstat` statistics
@@ -133,6 +157,29 @@ pub struct Domain {
     pub cpu_masks: Vec<u64>,
     pub statistics: Vec<u64>,
 }
+
+impl PidSchedStat {
+    pub fn new() -> PidSchedStat {
+        PidSchedStat::default()
+    }
+    
+    pub fn parse_pid_schedstat_output( line: &str ) -> Result<PidSchedStat, ProcSysParserError> {
+        let mut pid_schedstat = PidSchedStat::new();
+        pid_schedstat.stats = ProcSchedStat::generate_number_vector( line ).unwrap();
+        let now = SystemTime::now();
+        pid_schedstat.timestamp = match now.duration_since( SystemTime::UNIX_EPOCH )  {
+            Ok( elapsed ) => elapsed.as_secs() as u64,
+            Err( _error ) => 0,
+        };
+        Ok(pid_schedstat)
+    } 
+
+    pub fn read_pid_schedstat(pid_schedstat_file: &str) -> Result<PidSchedStat, ProcSysParserError> {
+        let pid_schedstat_output = read_to_string(pid_schedstat_file)
+            .map_err(|error| ProcSysParserError::FileReadError { file: pid_schedstat_file.to_string(), error })?;
+        Self::parse_pid_schedstat_output(&pid_schedstat_output)
+    }
+} 
 
 impl ProcSchedStat {
     pub fn new() -> ProcSchedStat {
@@ -178,8 +225,11 @@ impl ProcSchedStat {
                     .collect::<Result<Vec<_>, _>>()?
             },
             line => {
-                warn!("Unknown entry found: {}", line);
-                Vec::new()
+                line.split_whitespace()
+                    .map(|row| row.parse::<u64>().map_err(ProcSysParserError::ParseToIntegerError))
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .collect::<Result<Vec<_>, _>>()?
             },
         };
         Ok(proc_schedstat_line)
@@ -263,6 +313,46 @@ mod tests {
     use rand::{thread_rng, Rng};
     use rand::distributions::Alphanumeric;
     use super::*;
+
+    #[test]
+    fn parse_pid_stat_file() {
+        let line = "107855771533 32179678 11212";
+        let r = ProcSchedStat::generate_number_vector( line );
+        assert_eq!( r.unwrap(), vec![107855771533, 32179678, 11212] );
+    }
+
+    #[test]
+    fn pidschedstat_struct() {
+        let line = "107855771533 32179678 11212";
+        let result = PidSchedStat::parse_pid_schedstat_output( line ).unwrap();
+        let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok( elapsed ) => elapsed.as_secs() as u64,
+            Err( _error ) => 0,
+        };
+        assert!( result.timestamp - timestamp <= 1 );
+        assert_eq!( result.stats, vec![107855771533, 32179678, 11212]);
+    }
+
+    #[test]
+    fn create_pid_schedstat_file_and_read() {
+        let pid_schedstat = "107855771533 32179678 11212";
+        let directory_suffix: String = thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let test_path = format!("/tmp/test.{}/proc", directory_suffix);
+        let pid = 320;
+        create_dir_all(format!("{}/{}", test_path, pid)).expect("Error creating mock directory.");
+
+        write( format!("{}/{}/schedstat", test_path, pid), pid_schedstat).expect( format!("Error writing to {}/{}/schedstat", test_path, pid).as_str() );
+
+        let result = Builder::new().path(&test_path).read_pid( pid ).unwrap();
+        remove_dir_all(test_path).unwrap();
+
+        let timestamp = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok( elapsed ) => elapsed.as_secs() as u64,
+            Err( _error ) => 0,
+        };
+        assert!( result.timestamp - timestamp <= 1 );
+        assert_eq!( result.stats, vec![107855771533, 32179678, 11212]);
+    }
 
     // cpu times are in jiffies, which are clock ticks.
     // clock ticks are defined in the getconf value CLK_TCK.
