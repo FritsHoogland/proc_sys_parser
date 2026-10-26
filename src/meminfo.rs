@@ -64,6 +64,9 @@ ProcMemInfo {
     filepmdmapped: 0,
     cmatotal: 32768,
     cmafree: 31232,
+    balloon: Some(0),
+    gpuactive: Some(0),
+    gpureclaim: Some(0),
     hugepages_total: 0,
     hugepages_free: 0,
     hugepages_rsvd: 0,
@@ -138,6 +141,12 @@ pub struct ProcMemInfo {
     pub filepmdmapped: u64,
     pub cmatotal: u64,
     pub cmafree: u64,
+    /// Kernel 6.15+.
+    pub balloon: Option<u64>,
+    /// Kernel 7.1+.
+    pub gpuactive: Option<u64>,
+    /// Kernel 7.1+.
+    pub gpureclaim: Option<u64>,
     pub hugepages_total: u64,
     pub hugepages_free: u64,
     pub hugepages_rsvd: u64,
@@ -336,6 +345,15 @@ impl ProcMemInfo {
                 line if line.starts_with("CmaFree:") => {
                     procmeminfo.cmafree = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
+                line if line.starts_with("Balloon:") => {
+                    procmeminfo.balloon = Some(ProcMemInfo::parse_proc_meminfo_line(line)?)
+                }
+                line if line.starts_with("GPUActive:") => {
+                    procmeminfo.gpuactive = Some(ProcMemInfo::parse_proc_meminfo_line(line)?)
+                }
+                line if line.starts_with("GPUReclaim:") => {
+                    procmeminfo.gpureclaim = Some(ProcMemInfo::parse_proc_meminfo_line(line)?)
+                }
                 line if line.starts_with("HugePages_Total:") => {
                     procmeminfo.hugepages_total = ProcMemInfo::parse_proc_meminfo_line(line)?
                 }
@@ -445,6 +463,9 @@ FileHugePages:         0 kB
 FilePmdMapped:         0 kB
 CmaTotal:          32768 kB
 CmaFree:           31232 kB
+Balloon:            4096 kB
+GPUActive:          1024 kB
+GPUReclaim:          512 kB
 HugePages_Total:       0
 HugePages_Free:        0
 HugePages_Rsvd:        0
@@ -503,6 +524,9 @@ Hugetlb:               0 kB";
                 filepmdmapped: 0,
                 cmatotal: 32768,
                 cmafree: 31232,
+                balloon: Some(4096),
+                gpuactive: Some(1024),
+                gpureclaim: Some(512),
                 hugepages_total: 0,
                 hugepages_free: 0,
                 hugepages_rsvd: 0,
@@ -565,6 +589,9 @@ FileHugePages:         0 kB
 FilePmdMapped:         0 kB
 CmaTotal:          32768 kB
 CmaFree:           31232 kB
+Balloon:            4096 kB
+GPUActive:          1024 kB
+GPUReclaim:          512 kB
 HugePages_Total:       0
 HugePages_Free:        0
 HugePages_Rsvd:        0
@@ -636,6 +663,9 @@ Hugetlb:               0 kB";
                 filepmdmapped: 0,
                 cmatotal: 32768,
                 cmafree: 31232,
+                balloon: Some(4096),
+                gpuactive: Some(1024),
+                gpureclaim: Some(512),
                 hugepages_total: 0,
                 hugepages_free: 0,
                 hugepages_rsvd: 0,
